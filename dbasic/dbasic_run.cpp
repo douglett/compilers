@@ -6,8 +6,6 @@
 
 using namespace std;
 
-
-static map<string, Block> envfn;
 static map<string, i32> env;
 static int rtrace = 0;
 
@@ -81,16 +79,6 @@ static i32 runstmt(const Stmt& stmt) {
 		printf("\n");
 		return 0;
 	}
-	// call statement - simple sub call
-	else if (stmt.type.val == "call") {
-		assert( stmt.modifiers.size() > 0 );
-		auto id = stmt.modifiers[0].val;
-		if (rtrace)  printf("call %s\n", id.c_str());
-		if (envfn.count(id) == 0)
-			fprintf(stderr, "error: function not defined: %s\n", id.c_str()),  exit(1);
-		runblock( envfn[id] );
-		return 0;
-	}
 	fprintf(stderr, "error: unknown statement: %s\n", stmt.type.val.c_str());
 	exit(1);
 }
@@ -109,9 +97,6 @@ static i32 runblock(const Block& block) {
 			{ i32 res = runexpr(var.expr);  if (rtrace) printf("expr %d\n", res); }
 		else if (var.type == "stmt")
 			runstmt(var.stmt);
-		// define function block
-		else if (var.type == "block" && var.block.type.val == "function")
-			{ auto id = var.block.condition.token.val;  envfn[id] = var.block; }
 		// run block
 		else if (var.type == "block")
 			runblock(var.block);

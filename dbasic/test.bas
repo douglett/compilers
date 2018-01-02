@@ -12,11 +12,6 @@ if (= 10 (+ 5 5))
 	end
 end
 
-function foo
-	; do another
-	print "ass" contents (+ 10 20) (+ 20 30)
-end
-
 if (= a 20)
-	call foo
+	print "call foo"
 end

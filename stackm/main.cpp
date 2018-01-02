@@ -4,7 +4,7 @@
 using namespace std;
 
 
-int main() {
+void stacktest() {
 	try {
 		lframe();
 			ldef("PC", 1);
@@ -20,4 +20,9 @@ int main() {
 	catch (const string& e) {
 		fprintf(stderr, "error: %s\n", e.c_str());
 	}
+}
+
+
+int main() {
+	stacktest();
 }

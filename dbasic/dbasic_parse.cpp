@@ -149,20 +149,6 @@ static int parseblock(Block& block) {
 			{ lineno++;  continue; }
 		else if (vt[0].val == "end")
 			{ lineno++;  break; }
-		else if (vt[0].val == "function") {
-			// printf("%s\n", block.type.val.c_str());
-			assert( block.type.val == "program" );
-			lineno++;
-			// parse and check function name
-			Expr expr;
-			int pos = 1;
-			parseexpr(expr, vt, pos);
-			assert( expr.token.type == "ident" );
-			// parse block
-			Block b = { .type = vt[0], .condition = expr };
-			parseblock(b);
-			block.contents.push_back({ .type = "block", .block = b });
-		}
 		else if (in_list(vt[0].val, { "if", "while" }))
 			block.contents.push_back({ .type = "block", .block = pcond() });
 		else if (pgeneral::is_ident(vt[0].val)) {
@@ -181,6 +167,8 @@ static int parseblock(Block& block) {
 			parseexpr(expr, vt, pos);
 			block.contents.push_back({ .type = "expr", .expr = expr });
 		}
+		// else 
+		// 	block.contents.push_back({ .type = "stmt", .expr = pstmtall() });
 	}
 	return 0;
 }
