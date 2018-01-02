@@ -23,6 +23,29 @@ void stacktest() {
 }
 
 
+void test2() {
+	try {
+		lframe();
+
+		ldef("foo", 10);
+		ldef("i", 1);
+		llet("i", 9);
+		// while (lget("i") >= 0) {
+		while (loper(">=", lget("i"), 0)) {
+			lleta("foo", lget("i"), 'z' - lget("i"));
+			llet("i", loper("-", lget("i"), 1));
+		}
+		printf("> %s\n", lgetstr("foo").c_str());
+
+		lunframe();
+	}
+	catch (const string& e) {
+		fprintf(stderr, "error: %s\n", e.c_str());
+	}
+}
+
+
 int main() {
-	stacktest();
+	// stacktest();
+	test2();
 }

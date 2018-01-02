@@ -49,7 +49,7 @@ void ldef(const string& id, i32 size) {
 }
 // get var at array index
 i32 lgeta(const string& id, i32 pos) {
-	auto& v = lgetvar(id);  // get from stack. does error checking
+	const auto& v = lgetvar(id);  // get from stack. does error checking
 	if (pos < 0 || pos >= v.size())
 		throw (string) "index out of range on var " + id + " : " + to_string(pos);
 	return v[pos];
@@ -74,5 +74,15 @@ i32 loper(const string& op, i32 v1, i32 v2) {
 	else if (op == "-" )  return v1 -  v2;
 	else if (op == "=" || op == "==")  return v1 == v2;
 	else if (op == "!=")  return v1 != v2;
+	else if (op == ">=")  return v1 >= v2;
 	else    throw "unknown operator: " + op;
+}
+// get array as string
+string lgetstr(const string& id) {
+	string s;
+	const auto& v = lgetvar(id);
+	for (int i : v)
+		if (i == 0)  break;
+		else  s += (char) i;
+	return s;
 }
