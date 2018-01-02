@@ -30,7 +30,6 @@ void test2() {
 		ldef("foo", 10);
 		ldef("i", 1);
 		llet("i", 9);
-		// while (lget("i") >= 0) {
 		while (loper(">=", lget("i"), 0)) {
 			lleta("foo", lget("i"), 'z' - lget("i"));
 			llet("i", loper("-", lget("i"), 1));
