@@ -1,5 +1,5 @@
 #include "dbasic.h"
-#include "pgeneral.h"
+#include "parsers/pgeneral.h"
 #include <iostream>
 #include <map>
 #include <cassert>
@@ -23,6 +23,7 @@ static int in_list(const string& k, const vector<string>& slist) {
 // predef
 static i32 runblock(const Block& block);
 static i32 runstmt(const Stmt& stmt);
+
 // run
 static i32 runexpr(const Expr& expr) {
 	if (expr.token.type == "num")
@@ -60,6 +61,7 @@ static i32 runexpr(const Expr& expr) {
 	fprintf(stderr, "error: unknown type in expr: %s\n", expr.token.type.c_str());
 	exit(1);
 }
+
 static i32 runstmt(const Stmt& stmt) {
 	if (rtrace)  printf("stmt [%s]\n", stmt.type.val.c_str());
 	// let statement - assign
@@ -92,6 +94,7 @@ static i32 runstmt(const Stmt& stmt) {
 	fprintf(stderr, "error: unknown statement: %s\n", stmt.type.val.c_str());
 	exit(1);
 }
+
 static i32 runblock(const Block& block) {
 	if (rtrace)  printf("blck [%s] %d\n", block.type.val.c_str(), runexpr(block.condition));
 	// check block entry condition
@@ -116,6 +119,7 @@ static i32 runblock(const Block& block) {
 		goto block_top;
 	return 0;
 }
+
 int runprog(const Block& block) {
 	return runblock(block);
 }
