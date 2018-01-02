@@ -60,7 +60,7 @@ void llet(const string& id, i32 val) {
 i32 loper(const string& op, i32 v1, i32 v2) {
 	if      (op == "+" )  return v1 +  v2;
 	else if (op == "-" )  return v1 -  v2;
-	else if (op == "=" )  return v1 == v2;
+	else if (op == "=" || op == "==")  return v1 == v2;
 	else if (op == "!=")  return v1 != v2;
 	else    throw "unknown operator: " + op;
 }
