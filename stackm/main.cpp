@@ -35,7 +35,7 @@ void ldef(const string& id, i32 size) {
 		throw "def size out of range: " + to_string(size);
 	frames.back()[id] = vector<i32>(size, 0);
 }
-i32 lgeta(const string& id, i32 pos, i32 val) {
+i32 lgeta(const string& id, i32 pos) {
 	if (!frames.size())
 		throw "attempt to access on empty stack";
 	if (frames.back().count(id) == 0)
@@ -46,18 +46,25 @@ i32 lgeta(const string& id, i32 pos, i32 val) {
 	return v[pos];
 }
 void lleta(const string& id, i32 pos, i32 val) {
-	lgeta(id, pos, val);  // error checking
+	lgeta(id, pos);  // error checking
 	auto& v = frames.back()[id];
 	v[pos] = val;
 }
-i32 lget(const string& id, i32 val) {
-	return lgeta(id, 0, val);
+i32 lget(const string& id) {
+	return lgeta(id, 0);
 }
 void llet(const string& id, i32 val) {
 	lleta(id, 0, val);
 }
 void llabel(const string& id) {
 	throw "how do I set labels?";
+}
+i32 loper(const string& op, i32 v1, i32 v2) {
+	if      (op == "+" )  return v1 +  v2;
+	else if (op == "-" )  return v1 -  v2;
+	else if (op == "=" )  return v1 == v2;
+	else if (op == "!=")  return v1 != v2;
+	else    throw "unknown operator: " + op;
 }
 
 
@@ -66,8 +73,9 @@ int main() {
 		lframe();
 		ldef("foo", 1);
 		llet("foo", 20);
-		lleta("foo", 0, 20);
+		lleta("foo", 0, 21);
 		// llabel("foolabel");
+		printf("> [%d]\n", loper("+", 10, lget("foo")) );
 		lunframe();
 	}
 	catch (const string& e) {
