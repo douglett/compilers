@@ -135,40 +135,38 @@ int parsestmt(Stmt& stmt, const vector<Token>& vt, int& pos) {
 			stmt.arguments.push_back(e);
 	return 0;
 }
-int parseblock(Block& block) {
+
+
+//-- parsing blocks
+static Block pcond();
+static Block pprog();
+// inner block parsing
+static int parseblock(Block& block) {
 	while (lineno < proglines.size()) {
 		// tokenize line
-		// auto vs = pgeneral::tokenize( proglines[lineno++] );
-		auto vt = tokenize( proglines[lineno++] );
-		if (vt.size() == 0)  continue;
-		// 
-		auto cmd = vt[0];
-		if (cmd.val == "end") {
-			break;
-		}
-		else if (cmd.val == "function") {
+		auto vt = tokenize( proglines[lineno] );
+		if (vt.size() == 0)  
+			{ lineno++;  continue; }
+		else if (vt[0].val == "end")
+			{ lineno++;  break; }
+		else if (vt[0].val == "function") {
+			// printf("%s\n", block.type.val.c_str());
 			assert( block.type.val == "program" );
+			lineno++;
 			// parse and check function name
 			Expr expr;
 			int pos = 1;
 			parseexpr(expr, vt, pos);
 			assert( expr.token.type == "ident" );
 			// parse block
-			Block b = { .type = cmd, .condition = expr };
+			Block b = { .type = vt[0], .condition = expr };
 			parseblock(b);
 			block.contents.push_back({ .type = "block", .block = b });
 		}
-		else if (in_list(cmd.val, { "if", "while" })) {
-			// parse block entry condition
-			Expr expr;
-			int pos = 1;
-			parseexpr(expr, vt, pos);
-			// parse block
-			Block b = { .type = cmd, .condition = expr };
-			parseblock(b);
-			block.contents.push_back({ .type = "block", .block = b });
-		}
-		else if (pgeneral::is_ident(cmd.val)) {
+		else if (in_list(vt[0].val, { "if", "while" }))
+			block.contents.push_back({ .type = "block", .block = pcond() });
+		else if (pgeneral::is_ident(vt[0].val)) {
+			lineno++;
 			// parse Statement into AstVar container
 			Stmt stmt;
 			int pos = 0;
@@ -176,6 +174,7 @@ int parseblock(Block& block) {
 			block.contents.push_back({ .type = "stmt", .stmt = stmt });
 		}
 		else {
+			lineno++;
 			// parse Expression into AstVar container
 			Expr expr;
 			int pos = 0;
@@ -185,6 +184,23 @@ int parseblock(Block& block) {
 	}
 	return 0;
 }
+// conditionals (if, while)
+static Block pcond() {
+	auto vt = tokenize( proglines[lineno++] );
+	Block b = { .type = vt[0] };
+	int pos = 1;
+	parseexpr(b.condition, vt, pos);  // parse block entry condition
+	parseblock(b);  // parse inner block
+	return b;
+}
+// entire program
+static Block pprog() {
+	Block prog = Block{ .type=identifytok("program") };
+	parseblock(prog);
+	return prog;
+}
+
+
 int parsefile(const std::string& fname) {
 	fstream fs(fname, fstream::in);
 	string s;
@@ -193,19 +209,17 @@ int parsefile(const std::string& fname) {
 	// reset
 	lineno = 0;
 	proglines = {};
-	prog = Block{ .type=identifytok("program"), .condition={ .token=identifytok("1") } };
 	// getlines
-	while (getline(fs, s)) {
+	while (getline(fs, s))
 		proglines.push_back(s);
-	}
-	parseblock(prog);
+	prog = pprog();
 	showblock(prog);
 	return 0;
 }
 
 
 int main() {
-	if (parsefile("test2.bas"))  return 1;
+	if (parsefile("test.bas"))  return 1;
 	if (runprog(prog))  return 1;
 	return 0;
 }

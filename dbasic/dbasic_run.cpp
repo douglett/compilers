@@ -99,8 +99,9 @@ static i32 runblock(const Block& block) {
 	if (rtrace)  printf("blck [%s] %d\n", block.type.val.c_str(), runexpr(block.condition));
 	// check block entry condition
 	block_top:
-	if (block.type.val != "function" && runexpr(block.condition) == 0)
-		return 0;
+	if (in_list(block.type.val, { "if", "while" }))
+		if (runexpr(block.condition) == 0)
+			return 0;
 	// run each
 	for (const auto& var : block.contents)
 		// run statement or expression
