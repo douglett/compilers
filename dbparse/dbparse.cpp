@@ -25,7 +25,7 @@ static Token identifytok(const string& s) {
 	Token tok = { .val=s, .type="???" };
 	if (s.size() == 0)
 		;  // shouldn't happen
-	else if (in_list(s, { "end", "if", "elif", "while", "dim", "print" }))
+	else if (in_list(s, { "end", "if", "elif", "while", "goto", "dim", "print" }))
 		tok.type = "cmd";
 	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=" "+", "-", "*", "/", "&&", "||" }))
 		tok.type = "oper";
@@ -37,14 +37,17 @@ static Token identifytok(const string& s) {
 		tok.type = "ident_asstring";
 	else if (s.back() == '@' && pgeneral::is_ident(s.substr(0, s.length()-1)))
 		tok.type = "ident_asarray";
+	else if (s.back() == ':' && pgeneral::is_ident(s.substr(0, s.length()-1)))
+		tok.type = "label";
 	return tok;
 }
 
 
 // basic checks
 static void p_check_eol(int pos) {
-	if (pos < lines[lineno].size()-1)
-		throw (string) "expected eol as token pos: " + to_string(pos);
+	// printf(":: %d %d\n", pos, lines[lineno].size()-1);
+	if (pos != lines[lineno].size())
+		throw (string) "expected eol at token pos: " + to_string(pos);
 }
 static void p_check_nonempty() {
 	if (lineno >= lines.size())
@@ -70,9 +73,9 @@ static void p_if() {
 		throw (string) "expected bracketed expression after " + type;
 	// save
 	if (type == "if")
-		printf("IF    [expr]\n");
+		printf("IF     [expr]\n");
 	else 
-		printf("ELIF  [expr]\n");
+		printf("ELIF   [expr]\n");
 }
 // parse dim statements
 static void p_dim() {
@@ -83,7 +86,7 @@ static void p_dim() {
 	if (ln[1].type != "ident")
 		throw (string) "expected ident after dim, got: " + ln[1].val +":"+ ln[1].type;
 	// save
-	printf("DIM   [%s]\n", ln[1].val.c_str());
+	printf("DIM    [%s]\n", ln[1].val.c_str());
 }
 // parse print statements
 static void p_print() {
@@ -98,18 +101,37 @@ static void p_print() {
 		else
 			throw (string) "printing unknown type: " + ln[i].val +":"+ ln[i].type;
 	// save
-	printf("PRINT [%d]\n", (int)ln.size()-1);
+	printf("PRINT  [%d]\n", (int)ln.size()-1);
 }
 // parse assignment statement
 static void p_assign() {
 	p_check_nonempty();
 	const auto& ln = lines[lineno];
-	if (ln.size() <= 1)
-		throw (string) "expected = operator after identifier in assignment, got eol";
-	if (ln[1].type != "oper" || ln[1].val != "=")
-		throw (string) "expected = operator after identifier in assignment, got: " + ln[1].val +":"+ ln[1].type;
+	// if (ln.size() <= 1)
+	// 	throw (string) "expected = operator after identifier in assignment, got eol";
+	// if (ln[1].type != "oper" || ln[1].val != "=")
+	// 	throw (string) "expected = operator after identifier in assignment, got: " + ln[1].val +":"+ ln[1].type;
+	if (ln.size() <= 1 || ln[1].type != "oper" || ln[1].val != "=")
+		throw (string) "expected = after identifier: " + ln[0].val;
 	// save
 	printf("ASSIGN [%s]\n", ln[0].val.c_str());
+}
+static void p_label() {
+	p_check_nonempty();
+	p_check_eol(1);
+	const auto& lb = lines[lineno][0];
+	// save
+	printf("LABEL  [%s]\n", lb.val.c_str());
+}
+static void p_goto() {
+	p_check_nonempty();
+	const auto& ln = lines[lineno];
+	if (ln.size() < 2 || ln[1].type != "ident")
+		throw (string) "expected identifier after goto";
+	p_check_eol(2);  // expect eol after identifier always
+	// save
+	printf("GOTO   [%s]\n", ln[1].val.c_str());
+	// throw (string) "goto";
 }
 // parse each item in a block
 static void p_block() {
@@ -122,18 +144,24 @@ static void p_block() {
 		if (cmd.type == "cmd") {
 			if (cmd.val == "end") 
 				p_end(),  lineno++;
-			else if (cmd.val == "if" || cmd.val == "elif")
+			else if (cmd.val == "if" || cmd.val == "elif" || cmd.val == "while")
 				p_if(),  lineno++;
 			else if (cmd.val == "dim")
 				p_dim(),  lineno++;
 			else if (cmd.val == "print")
 				p_print(),  lineno++;
+			else if (cmd.val == "goto")
+				p_goto(),  lineno++;
 			else
 				throw (string) "unknown command in block: " + cmd.val;  // unknown command - break
 		}
 		// identifier - must be assignment
 		else if (cmd.type == "ident") {
 			p_assign(),  lineno++;
+		}
+		// label
+		else if (cmd.type == "label") {
+			p_label(),  lineno++;
 		}
 		// unknown type
 		else {

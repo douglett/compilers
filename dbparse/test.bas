@@ -21,7 +21,7 @@ while (i > 0)
 end
 
 ; goto
-:blah
+blah:
 i = 10
 if (i == 9)
 	goto blah
