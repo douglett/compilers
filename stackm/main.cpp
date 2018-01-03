@@ -1,5 +1,6 @@
 #include "envstack.h"
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -44,7 +45,37 @@ void test2() {
 }
 
 
+struct Expr {
+	string op;
+	vector<Expr> args;
+};
+
+void show(const Expr& e) {
+	static int tab=0;
+	printf("%s[%s]\n", string(tab*4, ' ').c_str(), e.op.c_str());
+	tab++;
+	for (const auto& a : e.args)
+		show(a);
+	tab--;
+}
+
+void test3() {
+	Expr e = { 
+		.op="==",
+		.args={ 
+			{"a"},
+			{
+				.op="+", 
+				.args={ {"b"}, {"2"} }
+			}
+		}
+	};
+	show(e);
+}
+
+
 int main() {
 	// stacktest();
-	test2();
+	// test2();
+	test3();
 }
