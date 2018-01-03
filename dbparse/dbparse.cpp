@@ -25,7 +25,7 @@ static Token identifytok(const string& s) {
 	Token tok = { .val=s, .type="???" };
 	if (s.size() == 0)
 		;  // shouldn't happen
-	else if (in_list(s, { "end", "if", "elif", "while", "goto", "dim", "print" }))
+	else if (in_list(s, { "end", "if", "elif", "while", "goto", "break", "dim", "print" }))
 		tok.type = "cmd";
 	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=" "+", "-", "*", "/", "&&", "||" }))
 		tok.type = "oper";
@@ -131,7 +131,12 @@ static void p_goto() {
 	p_check_eol(2);  // expect eol after identifier always
 	// save
 	printf("GOTO   [%s]\n", ln[1].val.c_str());
-	// throw (string) "goto";
+}
+static void p_break() {
+	p_check_nonempty();
+	p_check_eol(1);
+	// save
+	printf("BREAK\n");
 }
 // parse each item in a block
 static void p_block() {
@@ -152,6 +157,8 @@ static void p_block() {
 				p_print(),  lineno++;
 			else if (cmd.val == "goto")
 				p_goto(),  lineno++;
+			else if (cmd.val == "break")
+				p_break(),  lineno++;
 			else
 				throw (string) "unknown command in block: " + cmd.val;  // unknown command - break
 		}

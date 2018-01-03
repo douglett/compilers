@@ -6,6 +6,7 @@ dim i = 0
 dim foo[20]
 dim bar[] = { 1, 2, 3 }
 dim foobar[] = "some text"
+dim foobaz[256] = "some text"
 
 ; if block
 if (a == (b / 2))
@@ -31,8 +32,8 @@ end
 while (1)
 	dim text1[] = "foo"
 	dim text2[] = "bar"
-	concat text1 text2
-	concat text1 "blah"
+	; concat text1 text2
+	; concat text1 "blah"
 	print "foobar " text1$
 	break
 end
