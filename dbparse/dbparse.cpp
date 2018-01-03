@@ -23,10 +23,14 @@ static int in_list(const string& k, const vector<string>& vs) {
 }
 static Token identifytok(const string& s) {
 	Token tok = { .val=s, .type="???" };
-	if (in_list(s, { "end", "if" }))
+	if (s.size() == 0)
+		;  // shouldn't happen
+	else if (in_list(s, { "end", "if", "dim", "print" }))
 		tok.type = "cmd";
 	else if (pgeneral::is_ident(s))
 		tok.type = "ident";
+	else if (s.back() == '$' && pgeneral::is_ident(s.substr(0, s.length()-1)))
+		tok.type = "ident_asstring";
 	return tok;
 }
 
@@ -41,6 +45,13 @@ static void p_check_empty() {
 		throw (string) "expected line, found eof";
 	if (lines[lineno].size() == 0)
 		throw (string) "expected line contents, found empty line";
+}
+// parse end
+static void p_end() {
+	p_check_empty();
+	p_check_eol(1);
+	// save
+	printf("END\n");
 }
 // parse if statement
 static void p_if() {
@@ -64,6 +75,19 @@ static void p_dim() {
 	// save
 	printf("DIM [%s]\n", ln[1].val.c_str());
 }
+// parse print statements
+static void p_print() {
+	p_check_empty();
+	const auto& ln = lines[lineno];
+	for (int i=1; i<ln.size(); i++)
+		if (ln[i].type == "ident") ;
+		else if (ln[i].type == "ident_asstring") ;
+		else if (ln[i].type == "ident_asnum") ;
+		else if (ln[i].type == "ident_asarray") ;
+		else
+			throw (string) "printing unknown type: " + ln[i].val +":"+ ln[i].type;
+	// save
+}
 // parse each item in a block
 static void p_block() {
 	while (lineno < lines.size()) {
@@ -71,23 +95,22 @@ static void p_block() {
 		if (lines[lineno].size() == 0)
 			{ lineno++;  continue; }
 		const auto& cmd = lines[lineno][0];  // get command
-		// end - break block
-		if (cmd.val == "end") { 
-			p_check_eol(1);
-			lineno++;
-			return;
+		// parse command types
+		if (cmd.type == "cmd") {
+			if (cmd.val == "end") 
+				p_end(),  lineno++;
+			else if (cmd.val == "if")
+				p_if(),  lineno++;
+			else if (cmd.val == "dim")
+				p_dim(),  lineno++;
+			else if (cmd.val == "print")
+				p_print(),  lineno++;
+			else
+				throw (string) "unknown command in block: " + cmd.val;  // unknown command - break
 		}
-		else if (cmd.val == "if") {
-			p_if();
-			lineno++;
-		}
-		else if (cmd.val == "dim") {
-			p_dim();
-			lineno++;
-		}
-		// unknown - break
+		// unknown type
 		else {
-			throw (string) "unknown command in block: " + cmd.val;
+			throw (string) "unexpected token in block: " + cmd.val +":"+ cmd.type;
 		}
 	}
 }
