@@ -25,10 +25,14 @@ static Token identifytok(const string& s) {
 	Token tok = { .val=s, .type="???" };
 	if (s.size() == 0)
 		;  // shouldn't happen
-	else if (in_list(s, { "end", "if", "dim", "print" }))
+	else if (in_list(s, { "end", "if", "elif", "while", "dim", "print" }))
 		tok.type = "cmd";
+	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=" "+", "-", "*", "/", "&&", "||" }))
+		tok.type = "oper";
 	else if (pgeneral::is_ident(s))
 		tok.type = "ident";
+	else if (pgeneral::is_strlit(s))
+		tok.type = "str";
 	else if (s.back() == '$' && pgeneral::is_ident(s.substr(0, s.length()-1)))
 		tok.type = "ident_asstring";
 	else if (s.back() == '@' && pgeneral::is_ident(s.substr(0, s.length()-1)))
@@ -42,7 +46,7 @@ static void p_check_eol(int pos) {
 	if (pos < lines[lineno].size()-1)
 		throw (string) "expected eol as token pos: " + to_string(pos);
 }
-static void p_check_empty() {
+static void p_check_nonempty() {
 	if (lineno >= lines.size())
 		throw (string) "expected line, found eof";
 	if (lines[lineno].size() == 0)
@@ -50,44 +54,62 @@ static void p_check_empty() {
 }
 // parse end
 static void p_end() {
-	p_check_empty();
+	p_check_nonempty();
 	p_check_eol(1);
 	// save
 	printf("END\n");
 }
-// parse if statement
+// parse if or elif statement
 static void p_if() {
-	p_check_empty();
+	p_check_nonempty();
 	const auto& ln = lines[lineno];
+	const string& type = ln[0].val;
 	if (ln.size() <= 1)
-		throw (string) "expected expression after if";
+		throw (string) "expected expression after " + type;
 	if (ln[1].type != "bracket" && ln[1].val != "(")
-		throw (string) "expected bracketed expression after if";
+		throw (string) "expected bracketed expression after " + type;
 	// save
-	printf("IF  [expr]\n");
+	if (type == "if")
+		printf("IF    [expr]\n");
+	else 
+		printf("ELIF  [expr]\n");
 }
 // parse dim statements
 static void p_dim() {
-	p_check_empty();
+	p_check_nonempty();
 	const auto& ln = lines[lineno];
 	if (ln.size() <= 1)
 		throw (string) "expected ident after dim, got eol";
 	if (ln[1].type != "ident")
-		throw (string) "expected ident after dim, got: " + ln[1].type +":"+ ln[1].val;
+		throw (string) "expected ident after dim, got: " + ln[1].val +":"+ ln[1].type;
 	// save
-	printf("DIM [%s]\n", ln[1].val.c_str());
+	printf("DIM   [%s]\n", ln[1].val.c_str());
 }
 // parse print statements
 static void p_print() {
-	p_check_empty();
+	p_check_nonempty();
 	const auto& ln = lines[lineno];
 	for (int i=1; i<ln.size(); i++)
 		if (ln[i].type == "ident") ;
+		else if (ln[i].type == "str") ;
+		else if (ln[i].type == "num") ;
 		else if (ln[i].type == "ident_asstring") ;
 		else if (ln[i].type == "ident_asarray") ;
 		else
 			throw (string) "printing unknown type: " + ln[i].val +":"+ ln[i].type;
 	// save
+	printf("PRINT [%d]\n", (int)ln.size()-1);
+}
+// parse assignment statement
+static void p_assign() {
+	p_check_nonempty();
+	const auto& ln = lines[lineno];
+	if (ln.size() <= 1)
+		throw (string) "expected = operator after identifier in assignment, got eol";
+	if (ln[1].type != "oper" || ln[1].val != "=")
+		throw (string) "expected = operator after identifier in assignment, got: " + ln[1].val +":"+ ln[1].type;
+	// save
+	printf("ASSIGN [%s]\n", ln[0].val.c_str());
 }
 // parse each item in a block
 static void p_block() {
@@ -100,7 +122,7 @@ static void p_block() {
 		if (cmd.type == "cmd") {
 			if (cmd.val == "end") 
 				p_end(),  lineno++;
-			else if (cmd.val == "if")
+			else if (cmd.val == "if" || cmd.val == "elif")
 				p_if(),  lineno++;
 			else if (cmd.val == "dim")
 				p_dim(),  lineno++;
@@ -108,6 +130,10 @@ static void p_block() {
 				p_print(),  lineno++;
 			else
 				throw (string) "unknown command in block: " + cmd.val;  // unknown command - break
+		}
+		// identifier - must be assignment
+		else if (cmd.type == "ident") {
+			p_assign(),  lineno++;
 		}
 		// unknown type
 		else {
@@ -137,7 +163,7 @@ int pfile(const string& fname) {
 		return 0;
 	}
 	catch (const string& err) {
-		fprintf(stderr, "error: %s\n", err.c_str());
+		fprintf(stderr, "error [%d]: %s\n", lineno+1, err.c_str());
 		return 1;
 	}
 }
