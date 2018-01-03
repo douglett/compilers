@@ -31,6 +31,8 @@ static Token identifytok(const string& s) {
 		tok.type = "ident";
 	else if (s.back() == '$' && pgeneral::is_ident(s.substr(0, s.length()-1)))
 		tok.type = "ident_asstring";
+	else if (s.back() == '@' && pgeneral::is_ident(s.substr(0, s.length()-1)))
+		tok.type = "ident_asarray";
 	return tok;
 }
 
@@ -82,7 +84,6 @@ static void p_print() {
 	for (int i=1; i<ln.size(); i++)
 		if (ln[i].type == "ident") ;
 		else if (ln[i].type == "ident_asstring") ;
-		else if (ln[i].type == "ident_asnum") ;
 		else if (ln[i].type == "ident_asarray") ;
 		else
 			throw (string) "printing unknown type: " + ln[i].val +":"+ ln[i].type;
