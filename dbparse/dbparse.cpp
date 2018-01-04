@@ -78,10 +78,12 @@ static void p_if() {
 	p_expect_nonempty();
 	const auto& ln = lines[lineno];
 	const string& type = ln[0].val;
-	if (ln.size() <= 1)
-		throw (string) "expected expression after " + type;
-	if (ln[1].type != "bracket" && ln[1].val != "(")
+	p_expect_next(1);
+	if (ln[1].type != "bracket" || ln[1].val != "(")
 		throw (string) "expected bracketed expression after " + type;
+	p_expect_next(2);
+	if (ln.back().type != "bracket" || ln.back().val != ")")
+		throw (string) "expected close bracket after " + type;
 	// save
 	if (type == "if")
 		printf("IF     [expr]\n");
