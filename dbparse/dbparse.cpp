@@ -29,6 +29,10 @@ static Token identifytok(const string& s) {
 		tok.type = "cmd";
 	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=" "+", "-", "*", "/", "&&", "||" }))
 		tok.type = "oper";
+	else if (in_list(s, { "(", ")", "[", "]" }))
+		tok.type = "bracket";
+	else if (pgeneral::is_number(s))
+		tok.type = "num";
 	else if (pgeneral::is_ident(s))
 		tok.type = "ident";
 	else if (pgeneral::is_strlit(s))
@@ -41,15 +45,22 @@ static Token identifytok(const string& s) {
 		tok.type = "label";
 	return tok;
 }
+static string tokstr(const Token& t) {
+	return t.val + ":" + t.type;
+}
 
 
 // basic checks
-static void p_check_eol(int pos) {
+static void p_expect_eol(int pos) {
 	// printf(":: %d %d\n", pos, lines[lineno].size()-1);
 	if (pos != lines[lineno].size())
 		throw (string) "expected eol at token pos: " + to_string(pos);
 }
-static void p_check_nonempty() {
+static void p_expect_next(int pos) {
+	if (pos >= lines[lineno].size())	
+		throw (string) "unexpected eol at token pos: " + to_string(pos);
+}
+static void p_expect_nonempty() {
 	if (lineno >= lines.size())
 		throw (string) "expected line, found eof";
 	if (lines[lineno].size() == 0)
@@ -57,14 +68,14 @@ static void p_check_nonempty() {
 }
 // parse end
 static void p_end() {
-	p_check_nonempty();
-	p_check_eol(1);
+	p_expect_nonempty();
+	p_expect_eol(1);
 	// save
 	printf("END\n");
 }
 // parse if or elif statement
 static void p_if() {
-	p_check_nonempty();
+	p_expect_nonempty();
 	const auto& ln = lines[lineno];
 	const string& type = ln[0].val;
 	if (ln.size() <= 1)
@@ -79,18 +90,45 @@ static void p_if() {
 }
 // parse dim statements
 static void p_dim() {
-	p_check_nonempty();
+	p_expect_nonempty();
 	const auto& ln = lines[lineno];
 	if (ln.size() <= 1)
 		throw (string) "expected ident after dim, got eol";
 	if (ln[1].type != "ident")
-		throw (string) "expected ident after dim, got: " + ln[1].val +":"+ ln[1].type;
+		throw (string) "expected ident after dim, got: " + tokstr(ln[1]);
+	// get sizes
+	if (ln.size() >= 3) {
+		// assign expression
+		if (ln[2].type == "oper" && ln[2].val == "=") {
+			p_expect_next(3);
+			if (ln[3].type != "num")
+				throw (string) "expected number after equals in dim";
+		}
+		// assign array size
+		// else if (ln[2].type == "bracket" && ln[2].val == "[") {
+		// 	p_expect_next(3);
+		// 	if (ln[3].type == "bracket" && ln[3].val == "]")
+		// 		;
+		// 	else if (ln[3].type == "num") {
+		// 		p_expect_next(4);
+		// 		if (ln[4].type == "bracket" && ln[4].val == "]")
+		// 			;
+		// 		else
+		// 			throw (string) "expected closing bracket in dim, got: " + tokstr(ln[4]);
+		// 	}
+		// 	else
+		// 		throw (string) "unexpected token in dim: " + tokstr(ln[2]);	
+		// }
+		// else {
+		// 	throw (string) "unexpected token in dim: " + tokstr(ln[2]);
+		// }
+	}
 	// save
 	printf("DIM    [%s]\n", ln[1].val.c_str());
 }
 // parse print statements
 static void p_print() {
-	p_check_nonempty();
+	p_expect_nonempty();
 	const auto& ln = lines[lineno];
 	for (int i=1; i<ln.size(); i++)
 		if (ln[i].type == "ident") ;
@@ -105,36 +143,32 @@ static void p_print() {
 }
 // parse assignment statement
 static void p_assign() {
-	p_check_nonempty();
+	p_expect_nonempty();
 	const auto& ln = lines[lineno];
-	// if (ln.size() <= 1)
-	// 	throw (string) "expected = operator after identifier in assignment, got eol";
-	// if (ln[1].type != "oper" || ln[1].val != "=")
-	// 	throw (string) "expected = operator after identifier in assignment, got: " + ln[1].val +":"+ ln[1].type;
 	if (ln.size() <= 1 || ln[1].type != "oper" || ln[1].val != "=")
 		throw (string) "expected = after identifier: " + ln[0].val;
 	// save
 	printf("ASSIGN [%s]\n", ln[0].val.c_str());
 }
 static void p_label() {
-	p_check_nonempty();
-	p_check_eol(1);
+	p_expect_nonempty();
+	p_expect_eol(1);
 	const auto& lb = lines[lineno][0];
 	// save
 	printf("LABEL  [%s]\n", lb.val.c_str());
 }
 static void p_goto() {
-	p_check_nonempty();
+	p_expect_nonempty();
 	const auto& ln = lines[lineno];
 	if (ln.size() < 2 || ln[1].type != "ident")
 		throw (string) "expected identifier after goto";
-	p_check_eol(2);  // expect eol after identifier always
+	p_expect_eol(2);  // expect eol after identifier always
 	// save
 	printf("GOTO   [%s]\n", ln[1].val.c_str());
 }
 static void p_break() {
-	p_check_nonempty();
-	p_check_eol(1);
+	p_expect_nonempty();
+	p_expect_eol(1);
 	// save
 	printf("BREAK\n");
 }
