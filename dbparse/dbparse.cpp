@@ -105,23 +105,11 @@ static void p_dim() {
 				throw (string) "expected number after equals in dim";
 		}
 		// assign array size
-		// else if (ln[2].type == "bracket" && ln[2].val == "[") {
-		// 	p_expect_next(3);
-		// 	if (ln[3].type == "bracket" && ln[3].val == "]")
-		// 		;
-		// 	else if (ln[3].type == "num") {
-		// 		p_expect_next(4);
-		// 		if (ln[4].type == "bracket" && ln[4].val == "]")
-		// 			;
-		// 		else
-		// 			throw (string) "expected closing bracket in dim, got: " + tokstr(ln[4]);
-		// 	}
-		// 	else
-		// 		throw (string) "unexpected token in dim: " + tokstr(ln[2]);	
-		// }
-		// else {
-		// 	throw (string) "unexpected token in dim: " + tokstr(ln[2]);
-		// }
+		else if (ln[2].type == "bracket" && ln[2].val == "[")
+			;
+		// unknown
+		else
+			throw (string) "unexpected token in dim: " + tokstr(ln[2]);
 	}
 	// save
 	printf("DIM    [%s]\n", ln[1].val.c_str());
