@@ -87,10 +87,20 @@ static void p_if() {
 	if (ln.back().type != "bracket" || ln.back().val != ")")
 		throw (string) "expected close bracket after " + type;
 	// save
-	if (type == "if")
+	if (type == "if") {
 		printf("IF     [expr]\n");
-	else 
+		c_if();
+	}
+	else if (type == "elif") {
 		printf("ELIF   [expr]\n");
+		c_elif();
+	}
+	else if (type == "while") {
+		printf("WHILE  [expr]\n");
+		c_while();
+	}
+	else
+		throw (string) "unknown type in if: " + type;
 }
 // parse dim statements
 static void p_dim() {
@@ -133,6 +143,7 @@ static void p_print() {
 			throw (string) "printing unknown type: " + ln[i].val +":"+ ln[i].type;
 	// save
 	printf("PRINT  [%d]\n", (int)ln.size()-1);
+	c_print(ln.size()-1);
 }
 // parse assignment statement
 static void p_assign() {
@@ -142,6 +153,7 @@ static void p_assign() {
 		throw (string) "expected = after identifier: " + ln[0].val;
 	// save
 	printf("ASSIGN [%s]\n", ln[0].val.c_str());
+	c_assign(ln[0].val);
 }
 static void p_label() {
 	p_expect_nonempty();
@@ -149,6 +161,7 @@ static void p_label() {
 	const auto& lb = lines[lineno][0];
 	// save
 	printf("LABEL  [%s]\n", lb.val.c_str());
+	c_label(lb.val.substr(0, lb.val.size()-1));
 }
 static void p_goto() {
 	p_expect_nonempty();
@@ -158,15 +171,18 @@ static void p_goto() {
 	p_expect_eol(2);  // expect eol after identifier always
 	// save
 	printf("GOTO   [%s]\n", ln[1].val.c_str());
+	c_goto(ln[1].val);
 }
 static void p_break() {
 	p_expect_nonempty();
 	p_expect_eol(1);
 	// save
 	printf("BREAK\n");
+	c_break();
 }
 // parse each item in a block
 static void p_block() {
+	printf("PROG_START\n");
 	while (lineno < lines.size()) {
 		// check if line is empty
 		if (lines[lineno].size() == 0)
@@ -202,6 +218,9 @@ static void p_block() {
 			throw (string) "unexpected token in block: " + cmd.val +":"+ cmd.type;
 		}
 	}
+	// check final program structure
+	c_eof();
+	printf("PROG_EOF\n");
 }
 
 
@@ -232,7 +251,9 @@ int p_file(const string& fname) {
 
 
 int main() {
-	p_file("test.bas");
-	printf("---");
+	if (p_file("test.bas"))
+		return 1;
+	printf("---\n");
 	c_show_prog();
+	return 0;
 }

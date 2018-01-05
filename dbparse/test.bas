@@ -26,6 +26,7 @@ blah:
 i = 10
 if (i == 9)
 	goto blah
+	; goto balls
 end
 
 ; string manipulation
