@@ -137,22 +137,6 @@ static void p_dim() {
 	printf("DIM    [%s]\n", ln[1].val.c_str());
 	c_dim(ln[1].val);
 }
-// parse print statements
-static void p_print() {
-	p_expect_nonempty();
-	const auto& ln = lines[lineno];
-	for (int i=1; i<ln.size(); i++)
-		if (ln[i].type == "ident") ;
-		else if (ln[i].type == "str") ;
-		else if (ln[i].type == "num") ;
-		else if (ln[i].type == "ident_asstring") ;
-		else if (ln[i].type == "ident_asarray") ;
-		else
-			throw (string) "printing unknown type: " + ln[i].val +":"+ ln[i].type;
-	// save
-	printf("PRINT  [%d]\n", (int)ln.size()-1);
-	c_print(ln.size()-1);
-}
 // parse assignment statement
 static void p_assign() {
 	p_expect_nonempty();
@@ -191,6 +175,22 @@ static void p_break() {
 	printf("BREAK\n");
 	c_break();
 }
+// parse print statements
+static void p_print() {
+	p_expect_nonempty();
+	const auto& ln = lines[lineno];
+	for (int i=1; i<ln.size(); i++)
+		if (ln[i].type == "ident") ;
+		else if (ln[i].type == "str") ;
+		else if (ln[i].type == "num") ;
+		else if (ln[i].type == "ident_asstring") ;
+		else if (ln[i].type == "ident_asarray") ;
+		else
+			throw (string) "printing unknown type: " + ln[i].val +":"+ ln[i].type;
+	// save
+	printf("PRINT  [%d]\n", (int)ln.size()-1);
+	c_print(ln.size()-1);
+}
 // parse each item in a block
 static void p_block() {
 	printf("PROG_START\n");
@@ -209,12 +209,12 @@ static void p_block() {
 				p_else(),  lineno++;
 			else if (cmd.val == "dim")
 				p_dim(),  lineno++;
-			else if (cmd.val == "print")
-				p_print(),  lineno++;
 			else if (cmd.val == "goto")
 				p_goto(),  lineno++;
 			else if (cmd.val == "break")
 				p_break(),  lineno++;
+			else if (cmd.val == "print")
+				p_print(),  lineno++;
 			else
 				throw (string) "unknown command in block: " + cmd.val;  // unknown command - break
 		}

@@ -37,9 +37,6 @@ void c_while() {
 	block_stack.push_back("while");
 	prog.push_back("WHILE");
 }
-void c_print(i32 count) {
-	prog.push_back("PRINT " + to_string(count));
-}
 void c_assign(const std::string& id) {
 	prog.push_back("SET " + id);
 }
@@ -67,6 +64,11 @@ void c_eof() {
 		if (find(labels.begin(), labels.end(), g) == labels.end())
 			throw (string) "trying to GOTO missing label: " + g;
 	prog.push_back("EOF");
+}
+
+
+void c_print(i32 count) {
+	prog.push_back("PRINT " + to_string(count));
 }
 
 
