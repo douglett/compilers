@@ -13,9 +13,11 @@ void c_dim(const std::string& id) {
 	prog.push_back("DIM " + id + " 1");
 }
 void c_end() {
+	block_count--;
 	prog.push_back("END");
 }
 void c_if() {
+	block_count++;
 	prog.push_back("IF");
 }
 void c_elif() {
@@ -25,6 +27,7 @@ void c_else() {
 	prog.push_back("ELSE");
 }
 void c_while() {
+	block_count++;
 	prog.push_back("WHILE");
 }
 void c_print(i32 count) {
