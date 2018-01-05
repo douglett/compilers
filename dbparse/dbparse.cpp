@@ -119,15 +119,20 @@ static void p_dim() {
 	if (ln[1].type != "ident")
 		throw (string) "expected ident after dim, got: " + tokstr(ln[1]);
 	// get sizes
+	int dimsize = 1;
 	if (ln.size() >= 3) {
 		// assign array size
-		if (ln[2].type == "bracket" && ln[2].val == "[")
-			;
+		if (ln[2].type == "bracket" && ln[2].val == "[") {
+			p_expect_next(3);
+			int pos = 3;
+			if (ln[pos].type == "num")
+				dimsize = pgeneral::strtonum( ln[pos++].val );
+			if (ln[pos].type != "bracket" || ln[pos].val != "]")
+				throw (string) "expected closing bracket after size in dim";
+		}
 		// assign expression
 		else if (ln[2].type == "oper" && ln[2].val == "=") {
 			p_expect_next(3);
-			if (ln[3].type != "num")
-				throw (string) "expected number after equals in dim";
 		}
 		// unknown
 		else
@@ -135,7 +140,7 @@ static void p_dim() {
 	}
 	// save
 	printf("DIM    [%s]\n", ln[1].val.c_str());
-	c_dim(ln[1].val);
+	c_dim(ln[1].val, dimsize);
 }
 // parse assignment statement
 static void p_assign() {

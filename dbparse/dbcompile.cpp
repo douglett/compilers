@@ -8,8 +8,8 @@ static vector<string> prog;
 static vector<string> labels, gotos, block_stack;
 
 
-void c_dim(const std::string& id) {
-	prog.push_back("DIM " + id + " 1");
+void c_dim(const std::string& id, i32 size) {
+	prog.push_back("DIM " + id + " " + to_string(size));
 }
 void c_end() {
 	if (block_stack.size() == 0)
