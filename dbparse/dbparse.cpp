@@ -12,6 +12,9 @@ using namespace std;
 struct Token {
 	string val;
 	string type; };
+struct Expr {
+	Token tok;
+	vector<Expr> c; };
 static vector<vector<Token>> lines;
 static int lineno = 0;
 
@@ -49,6 +52,14 @@ static Token identifytok(const string& s) {
 static string tokstr(const Token& t) {
 	return t.val + ":" + t.type;
 }
+static void show_expr(const Expr& e) {
+	static int indent = 1;
+	printf("%s[%s]\n", string(indent*3,' ').c_str(), tokstr(e.tok).c_str());
+	indent++;
+	for (const auto& ee : e.c)
+		show_expr(ee);
+	indent--;
+}
 
 
 // basic checks
@@ -67,6 +78,37 @@ static void p_expect_nonempty() {
 	if (lines[lineno].size() == 0)
 		throw (string) "expected line contents, found empty line";
 }
+
+
+static Expr p_expression(int& pos) {
+	p_expect_next(pos);
+	const auto& ln = lines[lineno];
+	Expr e;
+	// atom
+	if (ln[pos].type == "num" || ln[pos].type == "ident")
+		e = { .tok=ln[pos++] };
+	// bracketed expression
+	else if (ln[pos].type == "bracket" && ln[pos].val == "(") {
+		// l = { .tok=identifytok("()"), .c={ p_expression(++pos) } };
+		e = p_expression(++pos);
+		p_expect_next(pos);
+		if (ln[pos].type != "bracket" || ln[pos].val != ")")
+			throw (string) "expected close bracket in EXPRESSION at pos " + to_string(pos) 
+				+ ", got: " + tokstr(ln[pos]);
+		pos++;
+	}
+	// unknown
+	else
+		throw (string) "unexpected token in EXPRESSION at pos " + to_string(pos)
+			+ ": " + tokstr(ln[pos]);
+
+	// operator? parse next
+	if (pos < ln.size() && ln[pos].type == "oper")
+		return { .tok=ln[pos++], .c={ e, p_expression(pos) } };
+	return e;
+}
+
+
 // parse end
 static void p_end() {
 	p_expect_nonempty();
@@ -80,12 +122,18 @@ static void p_if() {
 	p_expect_nonempty();
 	const auto& ln = lines[lineno];
 	const string& type = ln[0].val;
+	// make sure expression inside braces (needed?)
 	p_expect_next(1);
 	if (ln[1].type != "bracket" || ln[1].val != "(")
 		throw (string) "expected bracketed expression after " + type;
 	p_expect_next(2);
 	if (ln.back().type != "bracket" || ln.back().val != ")")
 		throw (string) "expected close bracket after " + type;
+	// get expression
+	int pos = 1;
+	auto e = p_expression(pos);
+	p_expect_eol(pos);
+	show_expr(e);
 	// save
 	if (type == "if") {
 		printf("IF     [expr]\n");
@@ -196,7 +244,9 @@ static void p_print() {
 	printf("PRINT  [%d]\n", (int)ln.size()-1);
 	c_print(ln.size()-1);
 }
-// parse each item in a block
+
+
+// parse each item in the program block
 static void p_block() {
 	printf("PROG_START\n");
 	while (lineno < lines.size()) {
