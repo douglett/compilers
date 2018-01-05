@@ -186,7 +186,7 @@ static void p_print() {
 		else if (ln[i].type == "ident_asstring") ;
 		else if (ln[i].type == "ident_asarray") ;
 		else
-			throw (string) "printing unknown type: " + ln[i].val +":"+ ln[i].type;
+			throw (string) "printing unknown type: " + tokstr(ln[i]);
 	// save
 	printf("PRINT  [%d]\n", (int)ln.size()-1);
 	c_print(ln.size()-1);
@@ -216,7 +216,7 @@ static void p_block() {
 			else if (cmd.val == "print")
 				p_print(),  lineno++;
 			else
-				throw (string) "unknown command in block: " + cmd.val;  // unknown command - break
+				throw (string) "unknown command in block: " + tokstr(cmd);  // unknown command - break
 		}
 		// identifier - must be assignment
 		else if (cmd.type == "ident") {
@@ -228,7 +228,7 @@ static void p_block() {
 		}
 		// unknown type
 		else {
-			throw (string) "unexpected token in block: " + cmd.val +":"+ cmd.type;
+			throw (string) "unexpected token in block: " + tokstr(cmd);
 		}
 	}
 	// check final program structure
