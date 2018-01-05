@@ -12,6 +12,8 @@ dim foobaz[256] = "some text"
 if (a == (b / 2))
 	print a b foobar$
 elif (a == c)
+	print "a is c"
+else
 	print "unknown"
 end
 

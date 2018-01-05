@@ -12,6 +12,7 @@ void c_dim(const std::string& id);
 void c_end();
 void c_if();
 void c_elif();
+void c_else();
 void c_while();
 void c_print(i32 count);
 void c_assign(const std::string& id);

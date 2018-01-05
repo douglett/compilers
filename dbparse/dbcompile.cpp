@@ -21,6 +21,9 @@ void c_if() {
 void c_elif() {
 	prog.push_back("ELIF");
 }
+void c_else() {
+	prog.push_back("ELSE");
+}
 void c_while() {
 	prog.push_back("WHILE");
 }

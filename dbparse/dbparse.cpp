@@ -26,7 +26,7 @@ static Token identifytok(const string& s) {
 	Token tok = { .val=s, .type="???" };
 	if (s.size() == 0)
 		;  // shouldn't happen
-	else if (in_list(s, { "end", "if", "elif", "while", "goto", "break", "dim", "print" }))
+	else if (in_list(s, { "end", "if", "elif", "else", "while", "goto", "break", "dim", "print" }))
 		tok.type = "cmd";
 	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=" "+", "-", "*", "/", "&&", "||" }))
 		tok.type = "oper";
@@ -102,6 +102,14 @@ static void p_if() {
 	else
 		throw (string) "unknown type in if: " + type;
 }
+// parse else statement - no conditional
+static void p_else() {
+	p_expect_nonempty();
+	p_expect_eol(1);
+	// save
+	printf("ELSE\n");
+	c_else();
+}
 // parse dim statements
 static void p_dim() {
 	p_expect_nonempty();
@@ -155,6 +163,7 @@ static void p_assign() {
 	printf("ASSIGN [%s]\n", ln[0].val.c_str());
 	c_assign(ln[0].val);
 }
+// parse label statement line
 static void p_label() {
 	p_expect_nonempty();
 	p_expect_eol(1);
@@ -163,6 +172,7 @@ static void p_label() {
 	printf("LABEL  [%s]\n", lb.val.c_str());
 	c_label(lb.val.substr(0, lb.val.size()-1));
 }
+// parse goto statement
 static void p_goto() {
 	p_expect_nonempty();
 	const auto& ln = lines[lineno];
@@ -173,6 +183,7 @@ static void p_goto() {
 	printf("GOTO   [%s]\n", ln[1].val.c_str());
 	c_goto(ln[1].val);
 }
+// parse break statement
 static void p_break() {
 	p_expect_nonempty();
 	p_expect_eol(1);
@@ -194,6 +205,8 @@ static void p_block() {
 				p_end(),  lineno++;
 			else if (cmd.val == "if" || cmd.val == "elif" || cmd.val == "while")
 				p_if(),  lineno++;
+			else if (cmd.val == "else")
+				p_else(),  lineno++;
 			else if (cmd.val == "dim")
 				p_dim(),  lineno++;
 			else if (cmd.val == "print")
