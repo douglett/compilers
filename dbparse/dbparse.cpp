@@ -1,3 +1,4 @@
+#include "dbparse.h"
 #include "parsers/pgeneral.h"
 #include <iostream>
 #include <string>
@@ -72,6 +73,7 @@ static void p_end() {
 	p_expect_eol(1);
 	// save
 	printf("END\n");
+	c_end();
 }
 // parse if or elif statement
 static void p_if() {
@@ -100,21 +102,22 @@ static void p_dim() {
 		throw (string) "expected ident after dim, got: " + tokstr(ln[1]);
 	// get sizes
 	if (ln.size() >= 3) {
+		// assign array size
+		if (ln[2].type == "bracket" && ln[2].val == "[")
+			;
 		// assign expression
-		if (ln[2].type == "oper" && ln[2].val == "=") {
+		else if (ln[2].type == "oper" && ln[2].val == "=") {
 			p_expect_next(3);
 			if (ln[3].type != "num")
 				throw (string) "expected number after equals in dim";
 		}
-		// assign array size
-		else if (ln[2].type == "bracket" && ln[2].val == "[")
-			;
 		// unknown
 		else
 			throw (string) "unexpected token in dim: " + tokstr(ln[2]);
 	}
 	// save
 	printf("DIM    [%s]\n", ln[1].val.c_str());
+	c_dim(ln[1].val);
 }
 // parse print statements
 static void p_print() {
@@ -202,7 +205,7 @@ static void p_block() {
 }
 
 
-int pfile(const string& fname) {
+int p_file(const string& fname) {
 	printf("parsing file: %s\n", fname.c_str());
 	// reset
 	lines = {}, lineno = 0;
@@ -229,5 +232,7 @@ int pfile(const string& fname) {
 
 
 int main() {
-	pfile("test.bas");
+	p_file("test.bas");
+	printf("---");
+	c_show_prog();
 }
