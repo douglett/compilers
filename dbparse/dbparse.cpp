@@ -121,7 +121,7 @@ static void p_dim() {
 	// get sizes
 	int dimsize = 1;
 	if (ln.size() >= 3) {
-		// assign array size
+		// parse as sized array
 		if (ln[2].type == "bracket" && ln[2].val == "[") {
 			p_expect_next(3);
 			int pos = 3;
@@ -130,7 +130,7 @@ static void p_dim() {
 			if (ln[pos].type != "bracket" || ln[pos].val != "]")
 				throw (string) "expected closing bracket after size in dim";
 		}
-		// assign expression
+		// assign expression to var
 		else if (ln[2].type == "oper" && ln[2].val == "=") {
 			p_expect_next(3);
 		}
