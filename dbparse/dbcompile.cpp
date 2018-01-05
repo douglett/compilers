@@ -5,29 +5,36 @@ using namespace std;
 
 
 static vector<string> prog;
-static int block_count = 0;
-static vector<string> labels, gotos;
+static vector<string> labels, gotos, block_stack;
 
 
 void c_dim(const std::string& id) {
 	prog.push_back("DIM " + id + " 1");
 }
 void c_end() {
-	block_count--;
+	if (block_stack.size() == 0)
+		throw (string) "unexpected END outside of BLOCK structure";
+	block_stack.pop_back();
 	prog.push_back("END");
 }
 void c_if() {
-	block_count++;
+	block_stack.push_back("if");
 	prog.push_back("IF");
 }
 void c_elif() {
+	if (block_stack.size() == 0 || (block_stack.back() != "if" && block_stack.back() != "elif"))
+		throw (string) "unexpected ELIF outside of IF BLOCK";
+	block_stack.back() = "elif";  // replace top of stack (must be if of elif) with elif
 	prog.push_back("ELIF");
 }
 void c_else() {
+	if (block_stack.size() == 0 || (block_stack.back() != "if" && block_stack.back() != "elif"))
+		throw (string) "unexpected ELIF outside of IF BLOCK";
+	block_stack.back() = "else";  // replace top of stack (must be if of elif) with else
 	prog.push_back("ELSE");
 }
 void c_while() {
-	block_count++;
+	block_stack.push_back("while");
 	prog.push_back("WHILE");
 }
 void c_print(i32 count) {
@@ -49,11 +56,13 @@ void c_goto(const std::string& id) {
 	prog.push_back("GOTO " + id);
 }
 void c_break() {
+	if (block_stack.size() == 0)
+		throw (string) "unexpected BREAK outside of BLOCK structure";
 	prog.push_back("BREAK");
 }
 void c_eof() {
-	if (block_count != 0)
-		throw (string) "mismatch between BLOCK statements and END";
+	if (block_stack.size() != 0)
+		throw (string) "unterminated block: " + block_stack.back();
 	for (const auto& g : gotos)
 		if (find(labels.begin(), labels.end(), g) == labels.end())
 			throw (string) "trying to GOTO missing label: " + g;
@@ -63,8 +72,7 @@ void c_eof() {
 
 void c_reset() {
 	prog = {};
-	block_count = 0;
-	labels = gotos = {};
+	labels = gotos = block_stack = {};
 }
 void c_show_prog() {
 	for (const auto& p : prog)
