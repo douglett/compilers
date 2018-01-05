@@ -33,7 +33,7 @@ static Token identifytok(const string& s) {
 		tok.type = "cmd";
 	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=" "+", "-", "*", "/", "&&", "||" }))
 		tok.type = "oper";
-	else if (in_list(s, { "(", ")", "[", "]" }))
+	else if (in_list(s, { "(", ")", "()", "[", "]" }))
 		tok.type = "bracket";
 	else if (pgeneral::is_number(s))
 		tok.type = "num";
@@ -80,31 +80,44 @@ static void p_expect_nonempty() {
 }
 
 
+// static Expr p_expression(int& pos) {
+// 	p_expect_next(pos);
+// 	const auto& ln = lines[lineno];
+// 	Expr e;
+// 	// atom
+// 	if (ln[pos].type == "num" || ln[pos].type == "ident")
+// 		e = { .tok=ln[pos++] };
+// 	// bracketed expression
+// 	else if (ln[pos].type == "bracket" && ln[pos].val == "(") {
+// 		// l = { .tok=identifytok("()"), .c={ p_expression(++pos) } };
+// 		e = p_expression(++pos);
+// 		p_expect_next(pos);
+// 		if (ln[pos].type != "bracket" || ln[pos].val != ")")
+// 			throw (string) "expected close bracket in EXPRESSION at pos " + to_string(pos) 
+// 				+ ", got: " + tokstr(ln[pos]);
+// 		pos++;
+// 	}
+// 	// unknown
+// 	else
+// 		throw (string) "unexpected token in EXPRESSION at pos " + to_string(pos)
+// 			+ ": " + tokstr(ln[pos]);
+
+// 	// operator? parse next
+// 	if (pos < ln.size() && ln[pos].type == "oper")
+// 		return { .tok=ln[pos++], .c={ e, p_expression(pos) } };
+// 	return e;
+// }
+
+
 static Expr p_expression(int& pos) {
 	p_expect_next(pos);
 	const auto& ln = lines[lineno];
 	Expr e;
-	// atom
-	if (ln[pos].type == "num" || ln[pos].type == "ident")
-		e = { .tok=ln[pos++] };
-	// bracketed expression
-	else if (ln[pos].type == "bracket" && ln[pos].val == "(") {
-		// l = { .tok=identifytok("()"), .c={ p_expression(++pos) } };
-		e = p_expression(++pos);
-		p_expect_next(pos);
-		if (ln[pos].type != "bracket" || ln[pos].val != ")")
-			throw (string) "expected close bracket in EXPRESSION at pos " + to_string(pos) 
-				+ ", got: " + tokstr(ln[pos]);
-		pos++;
-	}
-	// unknown
-	else
-		throw (string) "unexpected token in EXPRESSION at pos " + to_string(pos)
-			+ ": " + tokstr(ln[pos]);
+	for ( ; pos < ln.size(); pos++)
+		if (in_list(ln[pos].type, { "num", "ident", "oper", "bracket" }))
+			e.c.push_back({ .tok=ln[pos] });
 
-	// operator? parse next
-	if (pos < ln.size() && ln[pos].type == "oper")
-		return { .tok=ln[pos++], .c={ e, p_expression(pos) } };
+	show_expr(e);
 	return e;
 }
 
@@ -131,9 +144,8 @@ static void p_if() {
 		throw (string) "expected close bracket after " + type;
 	// get expression
 	int pos = 1;
-	auto e = p_expression(pos);
+	Expr e = p_expression(pos);
 	p_expect_eol(pos);
-	show_expr(e);
 	// save
 	if (type == "if") {
 		printf("IF     [expr]\n");
@@ -322,6 +334,6 @@ int main() {
 	if (p_file("test.bas"))
 		return 1;
 	printf("---\n");
-	c_show_prog();
+	// c_show_prog();
 	return 0;
 }
