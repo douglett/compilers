@@ -80,35 +80,6 @@ static void p_expect_nonempty() {
 }
 
 
-// static Expr p_expression(int& pos) {
-// 	p_expect_next(pos);
-// 	const auto& ln = lines[lineno];
-// 	Expr e;
-// 	// atom
-// 	if (ln[pos].type == "num" || ln[pos].type == "ident")
-// 		e = { .tok=ln[pos++] };
-// 	// bracketed expression
-// 	else if (ln[pos].type == "bracket" && ln[pos].val == "(") {
-// 		// l = { .tok=identifytok("()"), .c={ p_expression(++pos) } };
-// 		e = p_expression(++pos);
-// 		p_expect_next(pos);
-// 		if (ln[pos].type != "bracket" || ln[pos].val != ")")
-// 			throw (string) "expected close bracket in EXPRESSION at pos " + to_string(pos) 
-// 				+ ", got: " + tokstr(ln[pos]);
-// 		pos++;
-// 	}
-// 	// unknown
-// 	else
-// 		throw (string) "unexpected token in EXPRESSION at pos " + to_string(pos)
-// 			+ ": " + tokstr(ln[pos]);
-
-// 	// operator? parse next
-// 	if (pos < ln.size() && ln[pos].type == "oper")
-// 		return { .tok=ln[pos++], .c={ e, p_expression(pos) } };
-// 	return e;
-// }
-
-
 // parse expression brackets
 static void p_e_bracket(Expr& e) {
 	int bstart, bend;
@@ -149,6 +120,23 @@ static void p_e_oper(Expr& e, const vector<string>& oplist) {
 	for (int i=0; i<e.c.size(); i++)
 		p_e_oper(e.c[i], oplist);
 }
+// finally, validate
+static void p_e_validate(const Expr& e) {
+	if (e.tok.type == "bracket") {
+		if (e.tok.val != "()" || e.c.size() != 1)
+			throw (string) "expected bracket () with single child in EXPRESSION"; }
+	else if (e.tok.type == "ident" || e.tok.type == "num") {
+		if (e.c.size() != 0)
+			throw (string) "number or identifier with unexpected children in EXPRESSION"; }
+	else if (e.tok.type == "oper") {
+		if (e.c.size() != 2)
+			throw (string) "expected 2 arguments after operator in EXPRESSION"; }
+	else {
+		throw (string) "unexpected token in EXPRESSION: " + tokstr(e.tok); }
+	// validate children
+	for (const auto& e2 : e.c)
+		p_e_validate(e2);
+}
 // parse full expression
 static Expr p_expression(int& pos) {
 	p_expect_next(pos);
@@ -157,13 +145,15 @@ static Expr p_expression(int& pos) {
 	for ( ; pos < ln.size(); pos++)
 		if (in_list(ln[pos].type, { "num", "ident", "oper", "bracket" }))
 			e.c.push_back({ .tok=ln[pos] });
-
+	// parse items according to operator precedence
 	p_e_bracket(e);
 	p_e_oper(e, { "||" });
 	p_e_oper(e, { "&&" });
 	p_e_oper(e, { "==", "!=", "<", ">", "<=", ">=" });
 	p_e_oper(e, { "+", "-", "*", "/" });
-
+	// finally, validate resulting expression tree
+	p_e_validate(e);
+	// return results
 	show_expr(e);
 	return e;
 }
