@@ -109,6 +109,47 @@ static void p_expect_nonempty() {
 // }
 
 
+// parse expression brackets
+static void p_e_bracket(Expr& e) {
+	int bstart, bend;
+	start:
+	// find innermost bracket start and end
+	bstart = bend = -1;
+	for (int i=0; i<e.c.size(); i++)
+		if (e.c[i].tok.val == "(")
+			{ bstart = i; }
+		else if (e.c[i].tok.val == ")")
+			{ bend = i;  break; }
+	// if a start and end were given, squash, then loop
+	if (bstart >= 0 && bend >= 0) {
+		vector<Expr> subvec( e.c.begin() + bstart+1, e.c.begin() + bend );
+		e.c.erase( e.c.begin() + bstart, e.c.begin() + bend + 1 );
+		e.c.insert( e.c.begin() + bstart, { .tok=identifytok("()"), .c=subvec } );
+		goto start;
+	}
+	// if only one was found, must be bracket mismatch
+	if (bstart >= 0 || bend >= 0)
+		throw (string) "bracket mismatch in EXPRESSION: " + to_string(bstart) + " " + to_string(bend);
+	// special case - first item is a bracket
+	if (e.tok.val == "" && e.c.size() == 1 && e.c[0].tok.val == "()")
+		{ auto temp = e.c[0];  e = temp; }  // NOTE: e = e.c[0] without temp var causes strange results!
+}
+// parse expression operator
+static void p_e_oper(Expr& e, const vector<string>& oplist) {
+	for (int i=0; i<e.c.size(); i++)
+		// operator found - sqashify sublist
+		if (e.c[i].tok.type == "oper" && in_list(e.c[i].tok.val, oplist)) {
+			Expr e2 = e.c[i];
+			e2.c.insert( e2.c.end(), e.c.begin(), e.c.begin()+i );
+			e2.c.insert( e2.c.end(), e.c.begin()+1+1, e.c.end() );
+			e.c = { e2 };
+			break;
+		}
+	// check all sublists for operators
+	for (int i=0; i<e.c.size(); i++)
+		p_e_oper(e.c[i], oplist);
+}
+// parse full expression
 static Expr p_expression(int& pos) {
 	p_expect_next(pos);
 	const auto& ln = lines[lineno];
@@ -116,6 +157,12 @@ static Expr p_expression(int& pos) {
 	for ( ; pos < ln.size(); pos++)
 		if (in_list(ln[pos].type, { "num", "ident", "oper", "bracket" }))
 			e.c.push_back({ .tok=ln[pos] });
+
+	p_e_bracket(e);
+	p_e_oper(e, { "||" });
+	p_e_oper(e, { "&&" });
+	p_e_oper(e, { "==", "!=", "<", ">", "<=", ">=" });
+	p_e_oper(e, { "+", "-", "*", "/" });
 
 	show_expr(e);
 	return e;
