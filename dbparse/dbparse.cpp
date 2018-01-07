@@ -9,12 +9,6 @@ using namespace std;
 
 
 // static stuff
-struct Token {
-	string val;
-	string type; };
-struct Expr {
-	Token tok;
-	vector<Expr> c; };
 static vector<vector<Token>> lines;
 static int lineno = 0;
 
@@ -31,7 +25,7 @@ static Token identifytok(const string& s) {
 		;  // shouldn't happen
 	else if (in_list(s, { "end", "if", "elif", "else", "while", "goto", "break", "dim", "print" }))
 		tok.type = "cmd";
-	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=" "+", "-", "*", "/", "&&", "||" }))
+	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=", "+", "-", "*", "/", "&&", "||" }))
 		tok.type = "oper";
 	else if (in_list(s, { "(", ")", "()", "[", "]" }))
 		tok.type = "bracket";
@@ -107,15 +101,20 @@ static void p_e_bracket(Expr& e) {
 }
 // parse expression operator
 static void p_e_oper(Expr& e, const vector<string>& oplist) {
+	// for (const auto& ee : e.c)
+	// 	printf("%s ", ee.tok.val.c_str());
+	// printf("\n");
 	for (int i=0; i<e.c.size(); i++)
 		// operator found - sqashify sublist
 		if (e.c[i].tok.type == "oper" && in_list(e.c[i].tok.val, oplist)) {
 			Expr e2 = e.c[i];
-			e2.c.insert( e2.c.end(), e.c.begin(), e.c.begin()+i );
-			e2.c.insert( e2.c.end(), e.c.begin()+1+1, e.c.end() );
+			e2.c.push_back({ .c=vector<Expr>(e.c.begin(), e.c.begin()+i) });
+			e2.c.push_back({ .c=vector<Expr>(e.c.begin()+i+1, e.c.end()) });
 			e.c = { e2 };
 			break;
 		}
+	if (e.tok.val == "" && e.c.size() == 1)
+		{ auto temp = e.c[0];  e = temp; }  // NOTE: e = e.c[0] without temp var causes strange results!
 	// check all sublists for operators
 	for (int i=0; i<e.c.size(); i++)
 		p_e_oper(e.c[i], oplist);
@@ -146,11 +145,23 @@ static Expr p_expression(int& pos) {
 		if (in_list(ln[pos].type, { "num", "ident", "oper", "bracket" }))
 			e.c.push_back({ .tok=ln[pos] });
 	// parse items according to operator precedence
+		// printf("start\n");
+		// show_expr(e);
+		// printf("bracket\n");
 	p_e_bracket(e);
+		// show_expr(e);
+		// printf("or\n");
 	p_e_oper(e, { "||" });
+		// show_expr(e);
+		// printf("and\n");
 	p_e_oper(e, { "&&" });
+		// show_expr(e);
+		// printf("eq\n");
 	p_e_oper(e, { "==", "!=", "<", ">", "<=", ">=" });
+		// show_expr(e);
+		// printf("add\n");
 	p_e_oper(e, { "+", "-", "*", "/" });
+		// show_expr(e);
 	// finally, validate resulting expression tree
 	p_e_validate(e);
 	// return results
@@ -186,15 +197,15 @@ static void p_if() {
 	// save
 	if (type == "if") {
 		printf("IF     [expr]\n");
-		c_if();
+		c_if(e);
 	}
 	else if (type == "elif") {
 		printf("ELIF   [expr]\n");
-		c_elif();
+		c_elif(e);
 	}
 	else if (type == "while") {
 		printf("WHILE  [expr]\n");
-		c_while();
+		c_while(e);
 	}
 	else
 		throw (string) "unknown type in if: " + type;
@@ -247,7 +258,7 @@ static void p_assign() {
 		throw (string) "expected = after identifier: " + ln[0].val;
 	// save
 	printf("ASSIGN [%s]\n", ln[0].val.c_str());
-	c_assign(ln[0].val);
+	c_assign(ln[0].val, { .tok=identifytok("0") });
 }
 // parse label statement line
 static void p_label() {
@@ -364,13 +375,4 @@ int p_file(const string& fname) {
 		fprintf(stderr, "error [%d]: %s\n", lineno+1, err.c_str());
 		return 1;
 	}
-}
-
-
-int main() {
-	if (p_file("test.bas"))
-		return 1;
-	printf("---\n");
-	// c_show_prog();
-	return 0;
 }

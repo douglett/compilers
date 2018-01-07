@@ -8,6 +8,34 @@ static vector<string> prog;
 static vector<string> labels, gotos, block_stack;
 
 
+// static void c_expr(const Expr& e) {
+// 	for (const Expr& ee : e.c)
+// 		c_expr(ee);
+// 	if (e.tok.type == "ident" || e.tok.type == "num")
+// 		prog.push_back("SET _top " + e.tok.val);
+// 	else if (e.tok.type == "bracket")
+// 		; // ignore
+// 	else if (e.tok.type == "oper")
+// 		prog.push_back("OP"+e.tok.val+" _1 _2");
+// 	// prog.push_back("   EXPR " + e.tok.val);
+// }
+
+
+static string c_expr(const Expr& e) {
+	if (e.c.size() == 0)
+		return e.tok.val;
+	if (e.c.size() == 2) {
+		string l = c_expr(e.c[0]);
+		string r = c_expr(e.c[1]);
+		prog.push_back("OP"+e.tok.val + " "+l+" "+r);
+		return "_top";
+	}
+	if (e.c.size() == 1 && e.tok.type == "bracket")
+		return c_expr(e.c[0]);
+	throw (string) "error in EXPRESSION";
+}
+
+
 void c_dim(const std::string& id, i32 size) {
 	prog.push_back("DIM " + id + " " + to_string(size));
 }
@@ -17,15 +45,17 @@ void c_end() {
 	block_stack.pop_back();
 	prog.push_back("END");
 }
-void c_if() {
+void c_if(const Expr& e) {
+	string ex = c_expr(e);
 	block_stack.push_back("if");
-	prog.push_back("IF");
+	prog.push_back("IF "+ex);
 }
-void c_elif() {
+void c_elif(const Expr& e) {
+	string ex = c_expr(e);
 	if (block_stack.size() == 0 || (block_stack.back() != "if" && block_stack.back() != "elif"))
 		throw (string) "unexpected ELIF outside of IF BLOCK";
 	block_stack.back() = "elif";  // replace top of stack (must be if of elif) with elif
-	prog.push_back("ELIF");
+	prog.push_back("ELIF "+ex);
 }
 void c_else() {
 	if (block_stack.size() == 0 || (block_stack.back() != "if" && block_stack.back() != "elif"))
@@ -33,12 +63,14 @@ void c_else() {
 	block_stack.back() = "else";  // replace top of stack (must be if of elif) with else
 	prog.push_back("ELSE");
 }
-void c_while() {
+void c_while(const Expr& e) {
+	string ex = c_expr(e);
 	block_stack.push_back("while");
-	prog.push_back("WHILE");
+	prog.push_back("WHILE "+ex);
 }
-void c_assign(const std::string& id) {
-	prog.push_back("SET " + id);
+void c_assign(const std::string& id, const Expr& e) {
+	string ex = c_expr(e);
+	prog.push_back("SET " + id+" "+ex);
 }
 void c_label(const std::string& id) {
 	// save list of unique labels for validation

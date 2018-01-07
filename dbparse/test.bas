@@ -9,7 +9,7 @@ dim foobar[] = "some text"
 dim foobaz[256] = "some text"
 
 ; if block
-if (a == (b / 2))
+if (a + 1 == (b / 2))
 	print a b foobar$
 elif (a == c)
 	print "a is c"
