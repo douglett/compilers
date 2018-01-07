@@ -27,6 +27,8 @@ static Token identifytok(const string& s) {
 		tok.type = "cmd";
 	else if (in_list(s, { "=", "==", "!=", "<", ">", "<=", ">=", "+", "-", "*", "/", "&&", "||" }))
 		tok.type = "oper";
+	else if (in_list(s, { "_top" }))
+		tok.type = "reserved";
 	else if (in_list(s, { "(", ")", "()", "[", "]" }))
 		tok.type = "bracket";
 	else if (pgeneral::is_number(s))
