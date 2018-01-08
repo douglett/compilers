@@ -26,8 +26,10 @@ void c_label(const std::string& id);
 void c_goto(const std::string& id);
 void c_break();
 void c_eof();
-// special commands
-void c_print(i32 count);
-// meta commands
-void c_reset();
-void c_show_prog();
+void c_print(i32 count);  // special commands
+void c_reset();  // meta commands
+void c_showprog();
+const std::vector<std::string>&
+     c_program();
+// run
+int  r_runprog(const std::vector<std::string>& program);

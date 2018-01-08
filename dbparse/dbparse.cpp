@@ -9,6 +9,7 @@ using namespace std;
 
 
 // static stuff
+static const int dtrace = 0;
 static vector<vector<Token>> lines;
 static int lineno = 0;
 
@@ -60,7 +61,6 @@ static void show_expr(const Expr& e) {
 
 // basic checks
 static void p_expect_eol(int pos) {
-	// printf(":: %d %d\n", pos, lines[lineno].size()-1);
 	if (pos != lines[lineno].size())
 		throw (string) "expected eol at token pos: " + to_string(pos);
 }
@@ -167,7 +167,7 @@ static Expr p_expression(int& pos) {
 	// finally, validate resulting expression tree
 	p_e_validate(e);
 	// return results
-	show_expr(e);
+	if (dtrace)  show_expr(e);
 	return e;
 }
 
@@ -177,7 +177,7 @@ static void p_end() {
 	p_expect_nonempty();
 	p_expect_eol(1);
 	// save
-	printf("END\n");
+	if (dtrace)  printf("END\n");
 	c_end();
 }
 // parse if or elif statement
@@ -198,15 +198,15 @@ static void p_if() {
 	p_expect_eol(pos);
 	// save
 	if (type == "if") {
-		printf("IF     [expr]\n");
+		if (dtrace)  printf("IF     [expr]\n");
 		c_if(e);
 	}
 	else if (type == "elif") {
-		printf("ELIF   [expr]\n");
+		if (dtrace)  printf("ELIF   [expr]\n");
 		c_elif(e);
 	}
 	else if (type == "while") {
-		printf("WHILE  [expr]\n");
+		if (dtrace)  printf("WHILE  [expr]\n");
 		c_while(e);
 	}
 	else
@@ -217,7 +217,7 @@ static void p_else() {
 	p_expect_nonempty();
 	p_expect_eol(1);
 	// save
-	printf("ELSE\n");
+	if (dtrace)  printf("ELSE\n");
 	c_else();
 }
 // parse dim statements
@@ -249,7 +249,7 @@ static void p_dim() {
 			throw (string) "unexpected token in dim: " + tokstr(ln[2]);
 	}
 	// save
-	printf("DIM    [%s]\n", ln[1].val.c_str());
+	if (dtrace)  printf("DIM    [%s]\n", ln[1].val.c_str());
 	c_dim(ln[1].val, dimsize);
 }
 // parse assignment statement
@@ -259,7 +259,7 @@ static void p_assign() {
 	if (ln.size() <= 1 || ln[1].type != "oper" || ln[1].val != "=")
 		throw (string) "expected = after identifier: " + ln[0].val;
 	// save
-	printf("ASSIGN [%s]\n", ln[0].val.c_str());
+	if (dtrace)  printf("ASSIGN [%s]\n", ln[0].val.c_str());
 	c_assign(ln[0].val, { .tok=identifytok("0") });
 }
 // parse label statement line
@@ -268,7 +268,7 @@ static void p_label() {
 	p_expect_eol(1);
 	const auto& lb = lines[lineno][0];
 	// save
-	printf("LABEL  [%s]\n", lb.val.c_str());
+	if (dtrace)  printf("LABEL  [%s]\n", lb.val.c_str());
 	c_label(lb.val.substr(0, lb.val.size()-1));
 }
 // parse goto statement
@@ -279,7 +279,7 @@ static void p_goto() {
 		throw (string) "expected identifier after goto";
 	p_expect_eol(2);  // expect eol after identifier always
 	// save
-	printf("GOTO   [%s]\n", ln[1].val.c_str());
+	if (dtrace)  printf("GOTO   [%s]\n", ln[1].val.c_str());
 	c_goto(ln[1].val);
 }
 // parse break statement
@@ -287,7 +287,7 @@ static void p_break() {
 	p_expect_nonempty();
 	p_expect_eol(1);
 	// save
-	printf("BREAK\n");
+	if (dtrace)  printf("BREAK\n");
 	c_break();
 }
 // parse print statements
@@ -303,14 +303,14 @@ static void p_print() {
 		else
 			throw (string) "printing unknown type: " + tokstr(ln[i]);
 	// save
-	printf("PRINT  [%d]\n", (int)ln.size()-1);
+	if (dtrace)  printf("PRINT  [%d]\n", (int)ln.size()-1);
 	c_print(ln.size()-1);
 }
 
 
 // parse each item in the program block
 static void p_block() {
-	printf("PROG_START\n");
+	if (dtrace)  printf("PROG_START\n");
 	while (lineno < lines.size()) {
 		// check if line is empty
 		if (lines[lineno].size() == 0)
@@ -350,7 +350,7 @@ static void p_block() {
 	}
 	// check final program structure
 	c_eof();
-	printf("PROG_EOF\n");
+	if (dtrace)  printf("PROG_EOF\n");
 }
 
 

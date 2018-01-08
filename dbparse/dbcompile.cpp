@@ -4,6 +4,8 @@
 using namespace std;
 
 
+// static vars
+// static const int dtrace = 0;
 static vector<string> prog;
 static vector<string> labels, gotos, block_stack;
 
@@ -100,6 +102,7 @@ void c_eof() {
 
 
 void c_print(i32 count) {
+	printf("db_compile WARNING: unimplented compiled function print\n");
 	prog.push_back("PRINT " + to_string(count));
 }
 
@@ -108,7 +111,10 @@ void c_reset() {
 	prog = {};
 	labels = gotos = block_stack = {};
 }
-void c_show_prog() {
+void c_showprog() {
 	for (const auto& p : prog)
 		printf("%s\n", p.c_str());
+}
+const std::vector<std::string>& c_program() {
+	return prog;
 }
