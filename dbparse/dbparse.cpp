@@ -110,8 +110,8 @@ static void p_e_oper(Expr& e, const vector<string>& oplist) {
 		// operator found - sqashify sublist
 		if (e.c[i].tok.type == "oper" && in_list(e.c[i].tok.val, oplist)) {
 			Expr e2 = e.c[i];
-			e2.c.push_back({ .c=vector<Expr>(e.c.begin(), e.c.begin()+i) });
-			e2.c.push_back({ .c=vector<Expr>(e.c.begin()+i+1, e.c.end()) });
+			e2.c.push_back({ .tok=Token(), .c=vector<Expr>(e.c.begin(), e.c.begin()+i) });
+			e2.c.push_back({ .tok=Token(), .c=vector<Expr>(e.c.begin()+i+1, e.c.end()) });
 			e.c = { e2 };
 			break;
 		}
