@@ -11,8 +11,7 @@ static vector<string> split(const string& s) {
 			{ if (vs.back().length())  vs.push_back(""); }
 		else 
 			{ vs.back() += c; }
-	if (vs.back().length() == 0)
-		vs.pop_back();
+	if (vs.back().length() == 0)  vs.pop_back();
 	return vs;
 }
 
