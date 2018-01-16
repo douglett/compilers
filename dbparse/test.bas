@@ -21,6 +21,9 @@ end
 i = 10
 while (i > 0)
 	print "test" i
+	if (i == 2)
+		print "blah number 2"
+	end
 end
 
 ; goto
