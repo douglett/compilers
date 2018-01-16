@@ -7,7 +7,8 @@ using namespace std;
 // vars
 static vector<string> prog;
 static map<string, vector<i32>> env;
-static i32 PC = 0,  bstack = 0;
+static i32 PC = 0;
+static vector<pair<string, i32>> bstack;
 
 // helpers
 static vector<string> split(const string& s) {
@@ -31,6 +32,18 @@ static i32 match_end(int pos) {
 	}
 	return pos;
 }
+static i32 match_else(int pos) {
+	assert(pos >= 0 && pos < prog.size());
+	int indent = 0;
+	while (pos < prog.size()) {
+		auto cmd = split(prog[pos])[0];
+		if (cmd == "WHILE" || cmd == "IF") { indent++; }
+		else if (cmd == "ELIF" || cmd == "ELSE" || cmd == "END") 
+			{ if (indent == 0)  break;  else  indent--; }
+		pos++;
+	}
+	return pos;
+}
 
 static i32 getval(const string& id) {
 	if (id == "_top") {  // stack top
@@ -45,6 +58,9 @@ static void math(const string& OP, const string& id1, const string& id2) {
 	i32 i1 = getval(id1);
 	if      (OP == "==")  env["_top"].push_back( i1 == i2 );
 	else if (OP == ">" )  env["_top"].push_back( i1 >  i2 );
+	else if (OP == "<" )  env["_top"].push_back( i1 <  i2 );
+	else if (OP == ">=")  env["_top"].push_back( i1 >= i2 );
+	else if (OP == "<=")  env["_top"].push_back( i1 <= i2 );
 	else if (OP == "+" )  env["_top"].push_back( i1 +  i2 );
 	else if (OP == "-" )  env["_top"].push_back( i1 -  i2 );
 	else if (OP == "*" )  env["_top"].push_back( i1 *  i2 );
@@ -67,6 +83,20 @@ int r_runprog(const std::vector<std::string>& program) {
 				env[cmd[1]] = vector<i32>( pgeneral::strtonum(cmd[2]), 0 );
 			else if (cmd[0].substr(0,2) == "OP")
 				math( cmd[0].substr(2), cmd[1], cmd[2] );
+			else if (cmd[0] == "IF")
+				{ if (!getval("_top"))  PC = match_else(PC+1); }
+			else if (cmd[0] == "ELIF")
+				{ if (!getval("_top"))  PC = match_else(PC+1),  bstack.pop_back(); }
+			else if (cmd[0] == "ELSE")
+				{ }
+			else if (cmd[0] == "END") {
+				if (bstack.back().first == "WHILE") {
+					PC = bstack.back().second;
+					bstack.pop_back();
+					continue; }
+				else {
+					bstack.pop_back(); }
+			}
 			else
 				throw (string) "unknown command: " + cmd[0];
 			PC++;
