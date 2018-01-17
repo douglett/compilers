@@ -72,7 +72,7 @@ static void p_expect_nonempty() {
 
 
 // parse expression brackets
-static Expr p_e_bracket(Expr e) {
+static Expr p_expr_bracket(Expr e) {
 	int bstart, bend;
 	start:
 	// find innermost bracket start and end
@@ -96,12 +96,12 @@ static Expr p_e_bracket(Expr e) {
 	return e;
 }
 // parse expression operator
-static Expr p_e_oper(Expr e, const vector<string>& oplist) {
+static Expr p_expr_operator(Expr e, const vector<string>& oplist) {
 	// single empty item - just go up a step
 	if (e.tok.val == "" && e.c.size() == 1)
 		{ auto temp = e.c[0];  e = temp; }  // NOTE: e = e.c[0] without temp var causes strange results!
 	// check all operators
-	for (int i=e.c.size()-1; i>=0; i--) {
+	for (int i=e.c.size()-1; i>=0; i--) 
 		// operator found - sqashify sublist
 		if (e.c[i].tok.type == "oper" && in_list(e.c[i].tok.val, oplist)) {
 			Expr e2 = e.c[i];
@@ -111,14 +111,13 @@ static Expr p_e_oper(Expr e, const vector<string>& oplist) {
 			else  e.c = { e2 };
 			break;
 		}
-	}
 	// check all sublists for operators
 	for (int i=e.c.size()-1; i>=0; i--)
-		e.c[i] = p_e_oper(e.c[i], oplist);
+		e.c[i] = p_expr_operator(e.c[i], oplist);
 	return e;
 }
 // finally, validate
-static void p_e_validate(const Expr& e) {
+static void p_expr_validate(const Expr& e) {
 	if (e.tok.type == "bracket") {
 		if (e.tok.val != "()" || e.c.size() != 1)
 			throw (string) "expected bracket () with single child in EXPRESSION"; }
@@ -132,7 +131,7 @@ static void p_e_validate(const Expr& e) {
 		throw (string) "unexpected token in EXPRESSION: " + tokstr(e.tok); }
 	// validate children
 	for (const auto& e2 : e.c)
-		p_e_validate(e2);
+		p_expr_validate(e2);
 }
 // parse full expression
 static Expr p_expression(int& pos) {
@@ -145,20 +144,20 @@ static Expr p_expression(int& pos) {
 	// parse items according to operator precedence
 	const int edebug = 0;
 	if (edebug)  printf("start\n"),  show_expr(e),  printf("bracket\n");
-	e = p_e_bracket(e);
+	e = p_expr_bracket(e);
 	if (edebug)  show_expr(e),  printf("or\n");
-	e = p_e_oper(e, { "||" });
+	e = p_expr_operator(e, { "||" });
 	if (edebug)  show_expr(e),  printf("and\n");
-	e = p_e_oper(e, { "&&" });
+	e = p_expr_operator(e, { "&&" });
 	if (edebug)  show_expr(e),  printf("eq\n");
-	e = p_e_oper(e, { "==", "!=", "<", ">", "<=", ">=" });
+	e = p_expr_operator(e, { "==", "!=", "<", ">", "<=", ">=" });
 	if (edebug)  show_expr(e),  printf("add\n");
-	e = p_e_oper(e, { "+", "-" });
+	e = p_expr_operator(e, { "+", "-" });
 	if (edebug)  show_expr(e),  printf("mul\n");
-	e = p_e_oper(e, { "*", "/" });
+	e = p_expr_operator(e, { "*", "/" });
 	if (edebug)  show_expr(e);
 	// finally, validate resulting expression tree
-	p_e_validate(e);
+	p_expr_validate(e);
 	// return results
 	if (dtrace)  show_expr(e);
 	return e;
@@ -264,6 +263,8 @@ static void p_label() {
 	p_expect_nonempty();
 	p_expect_eol(1);
 	const auto& lb = lines[lineno][0];
+	if (lb.val.substr(0, 1) == "_")
+		throw (string) "labels with underscore prefix reserved: " + tokstr(lb);
 	// save
 	if (dtrace)  printf("LABEL  [%s]\n", lb.val.c_str());
 	c_label(lb.val.substr(0, lb.val.size()-1));

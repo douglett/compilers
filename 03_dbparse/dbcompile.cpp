@@ -38,12 +38,12 @@ void c_end() {
 	if (b.first == "while")
 		prog.push_back("GOTO _while_start_" + to_string(b.second));
 	// place after block jump point
-	prog.push_back("_" + b.first + "_end_" + to_string(b.second));
+	c_label("_" + b.first + "_end_" + to_string(b.second));
 	block_stack.pop_back();
 }
 void c_if(const Expr& e) {
 	block_stack.push_back({ "if", ++counter });  // next block state
-	prog.push_back("_if_start_" + to_string(counter));  // block start (needed?)
+	c_label("_if_start_" + to_string(counter));  // block start (needed?)
 	string ex = c_expr(e);  // dump expression
 	prog.push_back("IFN "+ex);
 	prog.push_back("GOTO _if_end_" + to_string(counter));
@@ -65,7 +65,7 @@ void c_if(const Expr& e) {
 // }
 void c_while(const Expr& e) {
 	block_stack.push_back({ "while", ++counter });  // next block state
-	prog.push_back("_while_start_" + to_string(counter));
+	c_label("_while_start_" + to_string(counter));
 	string ex = c_expr(e);
 	prog.push_back("IFN "+ex);
 	prog.push_back("GOTO _while_end_" + to_string(counter));
@@ -78,7 +78,7 @@ void c_label(const std::string& id) {
 	// save list of unique labels for validation
 	if (find(labels.begin(), labels.end(), id) == labels.end())
 		labels.push_back(id);
-	prog.push_back("LABEL " + id);
+	prog.push_back("::" + id);
 }
 void c_goto(const std::string& id) {
 	// save list of unique gotos for validation
