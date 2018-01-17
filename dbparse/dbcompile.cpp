@@ -6,22 +6,8 @@ using namespace std;
 
 
 // static vars
-// static const int dtrace = 0;
 static vector<string> prog;
 static vector<string> labels, gotos, block_stack;
-
-
-// static void c_expr(const Expr& e) {
-// 	for (const Expr& ee : e.c)
-// 		c_expr(ee);
-// 	if (e.tok.type == "ident" || e.tok.type == "num")
-// 		prog.push_back("SET _top " + e.tok.val);
-// 	else if (e.tok.type == "bracket")
-// 		; // ignore
-// 	else if (e.tok.type == "oper")
-// 		prog.push_back("OP"+e.tok.val+" _1 _2");
-// 	// prog.push_back("   EXPR " + e.tok.val);
-// }
 
 
 static string c_expr(const Expr& e) {
@@ -36,6 +22,24 @@ static string c_expr(const Expr& e) {
 	if (e.c.size() == 1 && e.tok.type == "bracket")
 		return c_expr(e.c[0]);
 	throw (string) "error in EXPRESSION";
+}
+
+static int matcher(int pos) {
+	for (int i=pos+1; i<prog.size(); i++)
+		if (prog[i].substr(0,3) == "END") {
+			printf("match %d %d\n", pos, i);
+			prog[pos] += " " + to_string(i);
+			return i;
+		}
+		else if (prog[i].substr(0,2) == "IF") {
+			printf("mif %d\n", i);
+			i = matcher(i);
+		}
+		else if (prog[i].substr(0,5) == "WHILE") {
+			printf("mwhile %d\n", i);
+			i = matcher(i);
+		}
+	return -1;
 }
 
 
@@ -98,6 +102,7 @@ void c_eof() {
 	for (const auto& g : gotos)
 		if (find(labels.begin(), labels.end(), g) == labels.end())
 			throw (string) "trying to GOTO missing label: " + g;
+	matcher(-1);
 	prog.push_back("EOF");
 }
 
@@ -113,8 +118,8 @@ void c_reset() {
 	labels = gotos = block_stack = {};
 }
 void c_showprog() {
-	for (const auto& p : prog)
-		printf("%s\n", p.c_str());
+	for (int i=0; i<prog.size(); i++)
+		printf("% 3d  %s\n", i, prog[i].c_str());
 }
 const std::vector<std::string>& c_program() {
 	return prog;
