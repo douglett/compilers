@@ -12,6 +12,9 @@ struct Expr {
 	Token tok;
 	std::vector<Expr> c; };
 
+// helpers
+int in_list(const std::string& k, const std::vector<std::string>& vs);
+std::vector<std::string> split(const std::string& s);
 // parse
 int  p_file(const std::string& fname);
 // compile

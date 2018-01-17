@@ -11,14 +11,6 @@ static i32 PC = 0;
 static vector<pair<string, i32>> bstack;
 
 // helpers
-static vector<string> split(const string& s) {
-	vector<string> vs={""};
-	for (char c : s)
-		if   (isspace(c)) { if (vs.back().length())  vs.push_back(""); }  // new entry
-		else { vs.back() += c; }
-	if (vs.size() > 1 && vs.back().length() == 0)  vs.pop_back();  // return at least one entry
-	return vs;
-}
 
 // find 'end' matching current block
 static i32 match_end(int pos) {

@@ -15,11 +15,6 @@ static int lineno = 0;
 
 
 // helpers
-static int in_list(const string& k, const vector<string>& vs) {
-	for (const auto& s : vs)
-		if (s == k)  return 1;
-	return 0;
-}
 static Token identifytok(const string& s) {
 	Token tok = { .val=s, .type="???" };
 	if (s.size() == 0)

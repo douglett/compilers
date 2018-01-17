@@ -9,6 +9,7 @@ using namespace std;
 static vector<string> prog;
 static vector<string> labels, gotos, block_stack;
 static vector<i32> bs2;
+// static vector<pair<string, i32>> blocks;
 
 
 static string c_expr(const Expr& e) {
