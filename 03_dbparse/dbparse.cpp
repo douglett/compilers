@@ -72,49 +72,50 @@ static void p_expect_nonempty() {
 
 
 // parse expression brackets
-static void p_e_bracket(Expr& e) {
+static Expr p_e_bracket(Expr e) {
 	int bstart, bend;
 	start:
 	// find innermost bracket start and end
 	bstart = bend = -1;
-	for (int i=0; i<e.c.size(); i++)
-		if (e.c[i].tok.val == "(")
-			{ bstart = i; }
-		else if (e.c[i].tok.val == ")")
-			{ bend = i;  break; }
-	// if a start and end were given, squash, then loop
-	if (bstart >= 0 && bend >= 0) {
-		vector<Expr> subvec( e.c.begin() + bstart+1, e.c.begin() + bend );
-		e.c.erase( e.c.begin() + bstart, e.c.begin() + bend + 1 );
-		e.c.insert( e.c.begin() + bstart, { .tok=identifytok("()"), .c=subvec } );
-		goto start;
+	for (int i=0; i<e.c.size(); i++) {
+		if (e.c[i].tok.val == "(")  bstart = i;
+		if (e.c[i].tok.val == ")")  bend = i;
+		// if a start and end were given, squash, then loop
+		if (bstart >= 0 && bend >= 0) {
+			vector<Expr> subvec( e.c.begin() + bstart+1, e.c.begin() + bend );
+			e.c.erase( e.c.begin() + bstart, e.c.begin() + bend + 1 );
+			e.c.insert( e.c.begin() + bstart, { .tok=identifytok("()"), .c=subvec } );
+			goto start;
+		}
 	}
 	// if only one was found, must be bracket mismatch
 	if (bstart >= 0 || bend >= 0)
 		throw (string) "bracket mismatch in EXPRESSION: " + to_string(bstart) + " " + to_string(bend);
 	// special case - first item is a bracket
-	if (e.tok.val == "" && e.c.size() == 1 && e.c[0].tok.val == "()")
-		{ auto temp = e.c[0];  e = temp; }  // NOTE: e = e.c[0] without temp var causes strange results!
+	if (e.tok.val == "" && e.c.size() == 1)  return e.c[0];
+	return e;
 }
 // parse expression operator
-static void p_e_oper(Expr& e, const vector<string>& oplist) {
-	// for (const auto& ee : e.c)
-	// 	printf("%s ", ee.tok.val.c_str());
-	// printf("\n");
-	for (int i=0; i<e.c.size(); i++)
+static Expr p_e_oper(Expr e, const vector<string>& oplist) {
+	// single empty item - just go up a step
+	if (e.tok.val == "" && e.c.size() == 1)
+		{ auto temp = e.c[0];  e = temp; }  // NOTE: e = e.c[0] without temp var causes strange results!
+	// check all operators
+	for (int i=e.c.size()-1; i>=0; i--) {
 		// operator found - sqashify sublist
 		if (e.c[i].tok.type == "oper" && in_list(e.c[i].tok.val, oplist)) {
 			Expr e2 = e.c[i];
 			e2.c.push_back({ .tok=Token(), .c=vector<Expr>(e.c.begin(), e.c.begin()+i) });
 			e2.c.push_back({ .tok=Token(), .c=vector<Expr>(e.c.begin()+i+1, e.c.end()) });
-			e.c = { e2 };
+			if (e.tok.val == "")  e = e2;
+			else  e.c = { e2 };
 			break;
 		}
-	if (e.tok.val == "" && e.c.size() == 1)
-		{ auto temp = e.c[0];  e = temp; }  // NOTE: e = e.c[0] without temp var causes strange results!
+	}
 	// check all sublists for operators
-	for (int i=0; i<e.c.size(); i++)
-		p_e_oper(e.c[i], oplist);
+	for (int i=e.c.size()-1; i>=0; i--)
+		e.c[i] = p_e_oper(e.c[i], oplist);
+	return e;
 }
 // finally, validate
 static void p_e_validate(const Expr& e) {
@@ -142,28 +143,20 @@ static Expr p_expression(int& pos) {
 		if (in_list(ln[pos].type, { "num", "ident", "oper", "bracket" }))
 			e.c.push_back({ .tok=ln[pos] });
 	// parse items according to operator precedence
-		printf("start\n");
-		show_expr(e);
-		printf("bracket\n");
-	p_e_bracket(e);
-		show_expr(e);
-		printf("or\n");
-	p_e_oper(e, { "||" });
-		show_expr(e);
-		printf("and\n");
-	p_e_oper(e, { "&&" });
-		show_expr(e);
-		printf("eq\n");
-	p_e_oper(e, { "==", "!=", "<", ">", "<=", ">=" });
-		show_expr(e);
-		printf("add\n");
-	p_e_oper(e, { "+", "-" });  // something wrong here logically...
-	p_e_oper(e, { "+", "-" });
-		show_expr(e);
-		printf("mul\n");
-	p_e_oper(e, { "*", "/" });
-	p_e_oper(e, { "*", "/" });
-		show_expr(e);
+	const int edebug = 0;
+	if (edebug)  printf("start\n"),  show_expr(e),  printf("bracket\n");
+	e = p_e_bracket(e);
+	if (edebug)  show_expr(e),  printf("or\n");
+	e = p_e_oper(e, { "||" });
+	if (edebug)  show_expr(e),  printf("and\n");
+	e = p_e_oper(e, { "&&" });
+	if (edebug)  show_expr(e),  printf("eq\n");
+	e = p_e_oper(e, { "==", "!=", "<", ">", "<=", ">=" });
+	if (edebug)  show_expr(e),  printf("add\n");
+	e = p_e_oper(e, { "+", "-" });
+	if (edebug)  show_expr(e),  printf("mul\n");
+	e = p_e_oper(e, { "*", "/" });
+	if (edebug)  show_expr(e);
 	// finally, validate resulting expression tree
 	p_e_validate(e);
 	// return results
