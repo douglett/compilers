@@ -157,7 +157,12 @@ static Expr p_expression(int& pos) {
 	p_e_oper(e, { "==", "!=", "<", ">", "<=", ">=" });
 		show_expr(e);
 		printf("add\n");
-	p_e_oper(e, { "+", "-", "*", "/" });
+	p_e_oper(e, { "+", "-" });  // something wrong here logically...
+	p_e_oper(e, { "+", "-" });
+		show_expr(e);
+		printf("mul\n");
+	p_e_oper(e, { "*", "/" });
+	p_e_oper(e, { "*", "/" });
 		show_expr(e);
 	// finally, validate resulting expression tree
 	p_e_validate(e);
