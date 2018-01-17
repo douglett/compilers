@@ -7,9 +7,8 @@ using namespace std;
 
 // static vars
 static vector<string> prog;
-static vector<string> labels, gotos, block_stack;
-static vector<i32> bs2;
-// static vector<pair<string, i32>> blocks;
+static vector<string> labels, gotos;
+static vector<pair<string, i32>> block_stack;
 
 
 static string c_expr(const Expr& e) {
@@ -51,38 +50,33 @@ void c_dim(const std::string& id, i32 size) {
 void c_end() {
 	if (block_stack.size() == 0)
 		throw (string) "unexpected END outside of BLOCK structure";
-	prog[bs2.back()] += " " + to_string(prog.size());
+	prog[ block_stack.back().second ] += " " + to_string(prog.size());
 	block_stack.pop_back();
-	bs2.pop_back();
 	prog.push_back("END");
 }
 void c_if(const Expr& e) {
 	string ex = c_expr(e);
-	block_stack.push_back("if");
-	bs2.push_back(prog.size());
+	block_stack.push_back({ "if", prog.size() });
 	prog.push_back("IF "+ex);
 }
 void c_elif(const Expr& e) {
 	string ex = c_expr(e);
-	if (block_stack.size() == 0 || (block_stack.back() != "if" && block_stack.back() != "elif"))
+	if (block_stack.size() == 0 || !in_list(block_stack.back().first, { "if", "elif" }))
 		throw (string) "unexpected ELIF outside of IF BLOCK";
-	prog[bs2.back()] += " " + to_string(prog.size());
-	block_stack.back() = "elif";  // replace top of stack (must be if of elif) with elif
-	bs2.back() = prog.size();
+	prog[ block_stack.back().second ] += " " + to_string(prog.size());
+	block_stack.back() = { "elif", prog.size() };  // replace top of stack (must be if of elif) with elif
 	prog.push_back("ELIF "+ex);
 }
 void c_else() {
-	if (block_stack.size() == 0 || (block_stack.back() != "if" && block_stack.back() != "elif"))
-		throw (string) "unexpected ELIF outside of IF BLOCK";
-	prog[bs2.back()] += " " + to_string(prog.size());
-	block_stack.back() = "else";  // replace top of stack (must be if of elif) with else
-	bs2.back() = prog.size();
+	if (block_stack.size() == 0 || !in_list(block_stack.back().first, { "if", "elif" }))
+		throw (string) "unexpected ELSE outside of IF BLOCK";
+	prog[ block_stack.back().second ] += " " + to_string(prog.size());
+	block_stack.back() = { "else", prog.size() };  // replace top of stack (must be if of elif) with else
 	prog.push_back("ELSE");
 }
 void c_while(const Expr& e) {
 	string ex = c_expr(e);
-	block_stack.push_back("while");
-	bs2.push_back(prog.size());
+	block_stack.push_back({ "while", prog.size() });
 	prog.push_back("WHILE "+ex);
 }
 void c_assign(const std::string& id, const Expr& e) {
@@ -108,7 +102,7 @@ void c_break() {
 }
 void c_eof() {
 	if (block_stack.size() != 0)
-		throw (string) "unterminated block: " + block_stack.back();
+		throw (string) "unterminated block: " + block_stack.back().first+"::"+to_string(block_stack.back().second);
 	for (const auto& g : gotos)
 		if (find(labels.begin(), labels.end(), g) == labels.end())
 			throw (string) "trying to GOTO missing label: " + g;
@@ -125,7 +119,8 @@ void c_print(i32 count) {
 
 void c_reset() {
 	prog = {};
-	labels = gotos = block_stack = {};
+	labels = gotos = {};
+	block_stack = {};
 }
 void c_showprog() {
 	for (int i=0; i<prog.size(); i++)
