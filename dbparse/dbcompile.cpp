@@ -9,6 +9,7 @@ using namespace std;
 static vector<string> prog;
 static vector<string> labels, gotos;
 static vector<pair<string, i32>> block_stack;
+static int counter = 0;
 
 
 static string c_expr(const Expr& e) {
@@ -25,24 +26,6 @@ static string c_expr(const Expr& e) {
 	throw (string) "error in EXPRESSION";
 }
 
-static int matcher(int pos) {
-	for (int i=pos+1; i<prog.size(); i++)
-		if (prog[i].substr(0,3) == "END") {
-			printf("match %d %d\n", pos, i);
-			prog[pos] += " " + to_string(i);
-			return i;
-		}
-		else if (prog[i].substr(0,2) == "IF") {
-			printf("mif %d\n", i);
-			i = matcher(i);
-		}
-		else if (prog[i].substr(0,5) == "WHILE") {
-			printf("mwhile %d\n", i);
-			i = matcher(i);
-		}
-	return -1;
-}
-
 
 void c_dim(const std::string& id, i32 size) {
 	prog.push_back("DIM " + id + " " + to_string(size));
@@ -50,34 +33,42 @@ void c_dim(const std::string& id, i32 size) {
 void c_end() {
 	if (block_stack.size() == 0)
 		throw (string) "unexpected END outside of BLOCK structure";
-	prog[ block_stack.back().second ] += " " + to_string(prog.size());
+	auto& b = block_stack.back();
+	// while loop action 
+	if (b.first == "while")
+		prog.push_back("GOTO _while_start_" + to_string(b.second));
+	// place after block jump point
+	prog.push_back("_" + b.first + "_end_" + to_string(b.second));
 	block_stack.pop_back();
-	prog.push_back("END");
 }
 void c_if(const Expr& e) {
-	string ex = c_expr(e);
-	block_stack.push_back({ "if", prog.size() });
-	prog.push_back("IF "+ex);
+	block_stack.push_back({ "if", ++counter });  // next block state
+	prog.push_back("_if_start_" + to_string(counter));  // block start (needed?)
+	string ex = c_expr(e);  // dump expression
+	prog.push_back("IFN "+ex);
+	prog.push_back("GOTO _if_end_" + to_string(counter));
 }
-void c_elif(const Expr& e) {
-	string ex = c_expr(e);
-	if (block_stack.size() == 0 || !in_list(block_stack.back().first, { "if", "elif" }))
-		throw (string) "unexpected ELIF outside of IF BLOCK";
-	prog[ block_stack.back().second ] += " " + to_string(prog.size());
-	block_stack.back() = { "elif", prog.size() };  // replace top of stack (must be if of elif) with elif
-	prog.push_back("ELIF "+ex);
-}
-void c_else() {
-	if (block_stack.size() == 0 || !in_list(block_stack.back().first, { "if", "elif" }))
-		throw (string) "unexpected ELSE outside of IF BLOCK";
-	prog[ block_stack.back().second ] += " " + to_string(prog.size());
-	block_stack.back() = { "else", prog.size() };  // replace top of stack (must be if of elif) with else
-	prog.push_back("ELSE");
-}
+// void c_elif(const Expr& e) {
+// 	string ex = c_expr(e);
+// 	if (block_stack.size() == 0 || !in_list(block_stack.back().first, { "if", "elif" }))
+// 		throw (string) "unexpected ELIF outside of IF BLOCK";
+// 	prog[ block_stack.back().second ] += " " + to_string(prog.size());
+// 	block_stack.back() = { "elif", prog.size() };  // replace top of stack (must be if of elif) with elif
+// 	prog.push_back("ELIF "+ex);
+// }
+// void c_else() {
+// 	if (block_stack.size() == 0 || !in_list(block_stack.back().first, { "if", "elif" }))
+// 		throw (string) "unexpected ELSE outside of IF BLOCK";
+// 	prog[ block_stack.back().second ] += " " + to_string(prog.size());
+// 	block_stack.back() = { "else", prog.size() };  // replace top of stack (must be if of elif) with else
+// 	prog.push_back("ELSE");
+// }
 void c_while(const Expr& e) {
+	block_stack.push_back({ "while", ++counter });  // next block state
+	prog.push_back("_while_start_" + to_string(counter));
 	string ex = c_expr(e);
-	block_stack.push_back({ "while", prog.size() });
-	prog.push_back("WHILE "+ex);
+	prog.push_back("IFN "+ex);
+	prog.push_back("GOTO _while_end_" + to_string(counter));
 }
 void c_assign(const std::string& id, const Expr& e) {
 	string ex = c_expr(e);
@@ -95,28 +86,23 @@ void c_goto(const std::string& id) {
 		gotos.push_back(id);
 	prog.push_back("GOTO " + id);
 }
-void c_break() {
-	if (block_stack.size() == 0)
-		throw (string) "unexpected BREAK outside of BLOCK structure";
-	prog.push_back("BREAK");
-}
+// void c_break() {
+// 	if (block_stack.size() == 0)
+// 		throw (string) "unexpected BREAK outside of BLOCK structure";
+// 	prog.push_back("BREAK");
+// }
 void c_eof() {
 	if (block_stack.size() != 0)
 		throw (string) "unterminated block: " + block_stack.back().first+"::"+to_string(block_stack.back().second);
 	for (const auto& g : gotos)
 		if (find(labels.begin(), labels.end(), g) == labels.end())
 			throw (string) "trying to GOTO missing label: " + g;
-	// matcher(-1);
 	prog.push_back("EOF");
 }
-
-
-void c_print(i32 count) {
+void c_print(i32 pcount) {
 	printf("db_compile WARNING: unimplented compiled function print\n");
-	prog.push_back("PRINT " + to_string(count));
+	prog.push_back("PRINT " + to_string(pcount));
 }
-
-
 void c_reset() {
 	prog = {};
 	labels = gotos = {};
@@ -124,8 +110,5 @@ void c_reset() {
 }
 void c_showprog() {
 	for (int i=0; i<prog.size(); i++)
-		printf("% 3d  %s\n", i, prog[i].c_str());
-}
-const std::vector<std::string>& c_program() {
-	return prog;
+		printf("% 3d) %s\n", i, prog[i].c_str());
 }

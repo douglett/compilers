@@ -11,9 +11,6 @@ dim foobaz[256] = "some text"
 ; if block
 if (a + 1 == (b / 2))
 	print a b foobar$
-elif (a == c)
-	print "a is c"
-else
 	print "unknown"
 end
 
@@ -32,6 +29,9 @@ i = 10
 if (i == 9)
 	goto blah
 	; goto balls
+	if (a == 1)
+		print "asd"
+	end
 end
 
 ; string manipulation
@@ -41,5 +41,4 @@ while (1)
 	; concat text1 text2
 	; concat text1 "blah"
 	print "foobar " text1$
-	break
 end

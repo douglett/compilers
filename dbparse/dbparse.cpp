@@ -9,7 +9,7 @@ using namespace std;
 
 
 // static stuff
-static const int dtrace = 0;
+static const int dtrace = 1;
 static vector<vector<Token>> lines;
 static int lineno = 0;
 
@@ -196,10 +196,10 @@ static void p_if() {
 		if (dtrace)  printf("IF     [expr]\n");
 		c_if(e);
 	}
-	else if (type == "elif") {
-		if (dtrace)  printf("ELIF   [expr]\n");
-		c_elif(e);
-	}
+	// else if (type == "elif") {
+	// 	if (dtrace)  printf("ELIF   [expr]\n");
+	// 	c_elif(e);
+	// }
 	else if (type == "while") {
 		if (dtrace)  printf("WHILE  [expr]\n");
 		c_while(e);
@@ -208,13 +208,13 @@ static void p_if() {
 		throw (string) "unknown type in if: " + type;
 }
 // parse else statement - no conditional
-static void p_else() {
-	p_expect_nonempty();
-	p_expect_eol(1);
-	// save
-	if (dtrace)  printf("ELSE\n");
-	c_else();
-}
+// static void p_else() {
+// 	p_expect_nonempty();
+// 	p_expect_eol(1);
+// 	// save
+// 	if (dtrace)  printf("ELSE\n");
+// 	c_else();
+// }
 // parse dim statements
 static void p_dim() {
 	p_expect_nonempty();
@@ -253,9 +253,13 @@ static void p_assign() {
 	const auto& ln = lines[lineno];
 	if (ln.size() <= 1 || ln[1].type != "oper" || ln[1].val != "=")
 		throw (string) "expected = after identifier: " + ln[0].val;
+	p_expect_next(2);
+	int pos = 2;
+	auto e = p_expression(pos);
 	// save
 	if (dtrace)  printf("ASSIGN [%s]\n", ln[0].val.c_str());
-	c_assign(ln[0].val, { .tok=identifytok("0") });
+	// c_assign(ln[0].val, { .tok=identifytok("0") });
+	c_assign(ln[0].val, e);
 }
 // parse label statement line
 static void p_label() {
@@ -278,13 +282,13 @@ static void p_goto() {
 	c_goto(ln[1].val);
 }
 // parse break statement
-static void p_break() {
-	p_expect_nonempty();
-	p_expect_eol(1);
-	// save
-	if (dtrace)  printf("BREAK\n");
-	c_break();
-}
+// static void p_break() {
+// 	p_expect_nonempty();
+// 	p_expect_eol(1);
+// 	// save
+// 	if (dtrace)  printf("BREAK\n");
+// 	c_break();
+// }
 // parse print statements
 static void p_print() {
 	p_expect_nonempty();
@@ -315,16 +319,16 @@ static void p_block() {
 		if (cmd.type == "cmd") {
 			if (cmd.val == "end") 
 				p_end(),  lineno++;
-			else if (cmd.val == "if" || cmd.val == "elif" || cmd.val == "while")
+			else if (cmd.val == "if" || cmd.val == "while")
 				p_if(),  lineno++;
-			else if (cmd.val == "else")
-				p_else(),  lineno++;
+			// else if (cmd.val == "else")
+				// p_else(),  lineno++;
 			else if (cmd.val == "dim")
 				p_dim(),  lineno++;
 			else if (cmd.val == "goto")
 				p_goto(),  lineno++;
-			else if (cmd.val == "break")
-				p_break(),  lineno++;
+			// else if (cmd.val == "break")
+			// 	p_break(),  lineno++;
 			else if (cmd.val == "print")
 				p_print(),  lineno++;
 			else
@@ -356,6 +360,10 @@ int p_file(const string& fname) {
 	pgeneral::punclist = "()[]";
 	// open and save tokens
 	fstream fs(fname, fstream::in);
+	if (!fs.is_open()) {
+		fprintf(stderr, "error: file not found: %s\n", fname.c_str());
+		return 1;
+	}
 	string s;
 	while (getline(fs, s)) {
 		auto vs = pgeneral::tokenize(s);
