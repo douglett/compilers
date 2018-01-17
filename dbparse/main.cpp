@@ -9,7 +9,7 @@ int main() {
 	printf("---\n");
 	c_showprog();
 	printf("---\n");
-	// if (r_runprog( c_program() ))
-	// 	return 1;
+	if (r_runprog( c_program() ))
+		return 1;
 	return 0;
 }
