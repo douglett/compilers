@@ -142,23 +142,23 @@ static Expr p_expression(int& pos) {
 		if (in_list(ln[pos].type, { "num", "ident", "oper", "bracket" }))
 			e.c.push_back({ .tok=ln[pos] });
 	// parse items according to operator precedence
-		// printf("start\n");
-		// show_expr(e);
-		// printf("bracket\n");
+		printf("start\n");
+		show_expr(e);
+		printf("bracket\n");
 	p_e_bracket(e);
-		// show_expr(e);
-		// printf("or\n");
+		show_expr(e);
+		printf("or\n");
 	p_e_oper(e, { "||" });
-		// show_expr(e);
-		// printf("and\n");
+		show_expr(e);
+		printf("and\n");
 	p_e_oper(e, { "&&" });
-		// show_expr(e);
-		// printf("eq\n");
+		show_expr(e);
+		printf("eq\n");
 	p_e_oper(e, { "==", "!=", "<", ">", "<=", ">=" });
-		// show_expr(e);
-		// printf("add\n");
+		show_expr(e);
+		printf("add\n");
 	p_e_oper(e, { "+", "-", "*", "/" });
-		// show_expr(e);
+		show_expr(e);
 	// finally, validate resulting expression tree
 	p_e_validate(e);
 	// return results
