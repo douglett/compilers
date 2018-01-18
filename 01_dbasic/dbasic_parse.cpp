@@ -157,7 +157,7 @@ static int parseblock(Block& block) {
 			Stmt stmt;
 			int pos = 0;
 			parsestmt(stmt, vt, pos);
-			block.contents.push_back({ .type = "stmt", .stmt = stmt });
+			block.contents.push_back({ .type="stmt", .block={}, .stmt=stmt, .expr={} });
 		}
 		else {
 			lineno++;
@@ -165,7 +165,7 @@ static int parseblock(Block& block) {
 			Expr expr;
 			int pos = 0;
 			parseexpr(expr, vt, pos);
-			block.contents.push_back({ .type = "expr", .expr = expr });
+			block.contents.push_back({ .type="expr", .block={}, .stmt={}, .expr=expr });
 		}
 		// else 
 		// 	block.contents.push_back({ .type = "stmt", .expr = pstmtall() });
