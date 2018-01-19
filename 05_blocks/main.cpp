@@ -6,23 +6,24 @@
 #include <map>
 using namespace std;
 
+
 struct Node {
 	string v;
 	vector<Node> c;
 };
-
 Node prog = {
 	"prog", {
 		{"function main", {
 			{"print hello world", {}},
-			{"let $a some_data_by_doug", {}},
-			{"print got: $a", {}}
+			{"let $a some_data_by_doug blah blah", {}},
+			{"print got: [$a]", {}}
 		}}
 	}
 };
-
 map<string,string> env;
 
+
+// string command (first item in string)
 string cmdtype(const string& str) {
 	stringstream ss(str);
 	string s;
@@ -32,6 +33,7 @@ string cmdtype(const string& str) {
 string cmdtype(const Node& n) {
 	return cmdtype(n.v);
 }
+// string value (all items after first)
 string cmdval(const string& str) {
 	stringstream ss(str);
 	string s;
@@ -42,6 +44,8 @@ string cmdval(const string& str) {
 string cmdval(const Node& n) {
 	return cmdval(n.v);
 }
+
+// check if string is valid id
 void checkid(const string& id) {
 	if (id.size() >= 2 && id[0] == '$') {
 		for (int i=1; i<id.size(); i++)
@@ -51,20 +55,31 @@ void checkid(const string& id) {
 	}			
 }
 
+// find function by id
 const Node& getfunc(const string& name) {
 	for (const Node& nn : prog.c)
 		if (cmdval(nn) == name)
 			return nn;
 	throw (string) "could not find function: " + name;
 }
+// get variable by $id
 string& getmem(const string& id, int let=0) {
 	checkid(id);
 	if (!let && env.count(id) == 0)
 		throw (string) "undefined identifier: "+id;
 	return env[id];
 }
-string injectvars(string str) {
-	return str;
+// replace $id with var contents
+string injectvars(const string& str) {
+	for (const auto& e : env) {
+		int pos = str.find(e.first);
+		if (pos != string::npos) {
+			string s1 = injectvars(str.substr(0, pos));  // recursive replace
+			string s2 = injectvars(str.substr(pos + e.first.length()));
+			return s1 + e.second + s2;  // return new string
+		}
+	}
+	return str;  // no match
 }
 
 void runn(const Node& n) {
