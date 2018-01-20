@@ -21,7 +21,14 @@ Node prog = {
 		}},
 		{"function test", {
 			{"rem testing function", {}},
-			{"print test-1 ran", {}}
+			{"print test function in running", {}},
+			{"let $a 1", {}},
+			{"if eq $a 1", {
+				{"print a equals 1!", {}}
+			}},
+			{"if lt $a 10", {
+				{"print $a is less than 10", {}}
+			}}
 		}}
 	}
 };
@@ -86,6 +93,17 @@ string injectvars(const string& str) {
 	}
 	return str;  // no match
 }
+// check for true / false
+int testval(const string& val) {
+	#define cmdtype3(CSTR) injectvars(cmdval(CSTR))
+	#define cmdtype4(CSTR) cmdtype3(cmdval(val))
+	if (cmdtype(val) == "eq")
+		// return injectvars(cmdtype(cmdval(val))) == injectvars(cmdtype(cmdval(cmdval(val))));
+		return cmdtype3(val) == cmdtype4(val);
+	if (cmdtype(val) == "lt")
+		return cmdtype3(val) <= cmdtype4(val);
+	return val.length() > 0;
+}
 
 void runn(const Node& n) {
 	for (int i=0; i<n.c.size(); i++) {
@@ -101,6 +119,8 @@ void runn(const Node& n) {
 			getmem(cmdtype(cmdval(nn)), 1) = injectvars(cmdval(cmdval(nn)));
 		else if (cmdtype(nn) == "call")
 			runn(getfunc(cmdval(nn)));
+		else if (cmdtype(nn) == "if")
+			{ if (testval(cmdval(nn)))  runn(nn); }
 		else
 			throw (string) "unknown command line: ["+nn.v+"]";
 	}
