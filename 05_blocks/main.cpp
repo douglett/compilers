@@ -20,6 +20,7 @@ Node prog = {
 			{"call test"}
 		}},
 		{"function test", {
+			{"rem testing function", {}},
 			{"print test-1 ran", {}}
 		}}
 	}
@@ -90,7 +91,7 @@ void runn(const Node& n) {
 	for (int i=0; i<n.c.size(); i++) {
 		auto& nn = n.c[i];
 		// printf("[%s]\n", nn.v.c_str());
-		if (cmdtype(nn) == "")
+		if (cmdtype(nn) == "" || cmdtype(nn) == "rem")
 			continue;  // noop
 		else if (cmdtype(nn) == "function")
 			{ if (n.v != "prog")  throw (string) "function not on top scope: " + nn.v; }
