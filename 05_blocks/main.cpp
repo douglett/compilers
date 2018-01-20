@@ -16,7 +16,11 @@ Node prog = {
 		{"function main", {
 			{"print hello world", {}},
 			{"let $a some_data_by_doug blah blah", {}},
-			{"print got: [$a]", {}}
+			{"print got: [$a]", {}},
+			{"call test"}
+		}},
+		{"function test", {
+			{"print test-1 ran", {}}
 		}}
 	}
 };
@@ -30,9 +34,6 @@ string cmdtype(const string& str) {
 	ss >> s;
 	return s;
 }
-string cmdtype(const Node& n) {
-	return cmdtype(n.v);
-}
 // string value (all items after first)
 string cmdval(const string& str) {
 	stringstream ss(str);
@@ -40,6 +41,9 @@ string cmdval(const string& str) {
 	ss >> s >> ws;   // remove first command & leading whitespace
 	getline(ss, s);  // get rest of command
 	return s;
+}
+string cmdtype(const Node& n) {
+	return cmdtype(n.v);
 }
 string cmdval(const Node& n) {
 	return cmdval(n.v);
@@ -86,12 +90,16 @@ void runn(const Node& n) {
 	for (int i=0; i<n.c.size(); i++) {
 		auto& nn = n.c[i];
 		// printf("[%s]\n", nn.v.c_str());
-		if (cmdtype(nn) == "function")
-			;
+		if (cmdtype(nn) == "")
+			continue;  // noop
+		else if (cmdtype(nn) == "function")
+			{ if (n.v != "prog")  throw (string) "function not on top scope: " + nn.v; }
 		else if (cmdtype(nn) == "print")
 			printf("> %s\n", injectvars(cmdval(nn)).c_str());
 		else if (cmdtype(nn) == "let")
 			getmem(cmdtype(cmdval(nn)), 1) = injectvars(cmdval(cmdval(nn)));
+		else if (cmdtype(nn) == "call")
+			runn(getfunc(cmdval(nn)));
 		else
 			throw (string) "unknown command line: ["+nn.v+"]";
 	}
