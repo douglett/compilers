@@ -3,10 +3,12 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <cstdint>
 #include <map>
 using namespace std;
 
 
+typedef int32_t i32;
 struct Node {
 	string v;
 	vector<Node> c;
@@ -57,6 +59,14 @@ string cmdval(const Node& n) {
 	return cmdval(n.v);
 }
 
+// string to int
+i32 toint(const string& s) {
+	stringstream ss(s);
+	i32 i = 0;
+	ss >> i;
+	return i;
+}
+
 // check if string is valid id
 void checkid(const string& id) {
 	if (id.size() >= 2 && id[0] == '$') {
@@ -95,13 +105,11 @@ string injectvars(const string& str) {
 }
 // check for true / false
 int testval(const string& val) {
-	#define cmdtype3(CSTR) injectvars(cmdval(CSTR))
+	#define cmdtype3(CSTR) injectvars(cmdtype(cmdval(CSTR)))
 	#define cmdtype4(CSTR) cmdtype3(cmdval(val))
-	if (cmdtype(val) == "eq")
-		// return injectvars(cmdtype(cmdval(val))) == injectvars(cmdtype(cmdval(cmdval(val))));
-		return cmdtype3(val) == cmdtype4(val);
-	if (cmdtype(val) == "lt")
-		return cmdtype3(val) <= cmdtype4(val);
+	if (cmdtype(val) == "eq")  return cmdtype3(val) == cmdtype4(val);
+	if (cmdtype(val) == "lt")  return toint(cmdtype3(val)) <= toint(cmdtype4(val));
+	if (cmdtype(val) == "gt")  return toint(cmdtype3(val)) >= toint(cmdtype4(val));
 	return val.length() > 0;
 }
 
