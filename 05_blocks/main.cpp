@@ -19,7 +19,8 @@ Node prog = {
 			{"print hello world", {}},
 			{"let $a some_data_by_doug blah blah", {}},
 			{"print got: [$a]", {}},
-			{"call test"}
+			{"call test"},
+			{"rem call inputtest"}
 		}},
 		{"function test", {
 			{"rem testing function", {}},
@@ -28,9 +29,14 @@ Node prog = {
 			{"if eq $a 1", {
 				{"print a equals 1!", {}}
 			}},
-			{"if lt $a 10", {
+			{"if lt $a 1", {
 				{"print $a is less than 10", {}}
 			}}
+		}},
+		{"function inputtest", {
+			{"let $b", {}},
+			{"input $b", {}},
+			{"print you input: [$b]", {}}
 		}}
 	}
 };
@@ -51,6 +57,15 @@ string cmdval(const string& str) {
 	ss >> s >> ws;   // remove first command & leading whitespace
 	getline(ss, s);  // get rest of command
 	return s;
+}
+// return type and val from string
+pair<string, string> cmdat(const string& str, i32 pos) {
+	stringstream ss(str);
+	string t, v;
+	for (int i=0; i<=pos; i++)
+		ss >> t >> ws;
+	getline(ss, v);
+	return { t, v };
 }
 string cmdtype(const Node& n) {
 	return cmdtype(n.v);
@@ -105,11 +120,14 @@ string injectvars(const string& str) {
 }
 // check for true / false
 int testval(const string& val) {
-	#define cmdtype3(CSTR) injectvars(cmdtype(cmdval(CSTR)))
-	#define cmdtype4(CSTR) cmdtype3(cmdval(val))
-	if (cmdtype(val) == "eq")  return cmdtype3(val) == cmdtype4(val);
-	if (cmdtype(val) == "lt")  return toint(cmdtype3(val)) <= toint(cmdtype4(val));
-	if (cmdtype(val) == "gt")  return toint(cmdtype3(val)) >= toint(cmdtype4(val));
+	#define cmdtype2(CSTR) injectvars(cmdtype(cmdval(CSTR)))
+	#define cmdtype3(CSTR) cmdtype2(cmdval(val))
+	if (cmdtype(val) == "eq"  )  return cmdtype2(val) == cmdtype3(val);
+	if (cmdtype(val) == "not" )  return cmdtype2(val) != cmdtype3(val);
+	if (cmdtype(val) == "lt"  )  return toint(cmdtype2(val)) <  toint(cmdtype3(val));
+	if (cmdtype(val) == "gt"  )  return toint(cmdtype2(val)) >  toint(cmdtype3(val));
+	if (cmdtype(val) == "lte" )  return toint(cmdtype2(val)) <= toint(cmdtype3(val));
+	if (cmdtype(val) == "gte" )  return toint(cmdtype2(val)) >= toint(cmdtype3(val));
 	return val.length() > 0;
 }
 
@@ -122,7 +140,9 @@ void runn(const Node& n) {
 		else if (cmdtype(nn) == "function")
 			{ if (n.v != "prog")  throw (string) "function not on top scope: " + nn.v; }
 		else if (cmdtype(nn) == "print")
-			printf("> %s\n", injectvars(cmdval(nn)).c_str());
+			printf(": %s\n", injectvars(cmdval(nn)).c_str());
+		else if (cmdtype(nn) == "input")
+			printf("> "), getline( cin, getmem(cmdtype(cmdval(nn))) );
 		else if (cmdtype(nn) == "let")
 			getmem(cmdtype(cmdval(nn)), 1) = injectvars(cmdval(cmdval(nn)));
 		else if (cmdtype(nn) == "call")
@@ -137,7 +157,7 @@ void runn(const Node& n) {
 int main() {
 	printf("start\n");
 	try {
-		printf("<<parse>>\n");
+		printf("<<run prog>>\n");
 		runn(prog);
 		printf("<<run main>>\n");
 		runn(getfunc("main"));
