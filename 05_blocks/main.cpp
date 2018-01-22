@@ -20,7 +20,8 @@ Node prog = {
 			{"let $a some_data_by_doug blah blah", {}},
 			{"print got: [$a]", {}},
 			{"call test"},
-			{"rem call inputtest"}
+			{"rem call inputtest"},
+			{"call test2"}
 		}},
 		{"function test", {
 			{"rem testing function", {}},
@@ -37,6 +38,14 @@ Node prog = {
 			{"let $b", {}},
 			{"input $b", {}},
 			{"print you input: [$b]", {}}
+		}},
+		{"function test2", {
+			{"let $b hello"},
+			{"let $b $b$b"},
+			{"print [$b]"},
+			{"let $b 1"},
+			{"math + $b 20"},
+			{"print $b"}
 		}}
 	}
 };
