@@ -37,7 +37,7 @@ struct ProgVM {
 
 
 int main() {
-	vector<string> scripts = { "1", "2", "3", "4" };
+	vector<string> scripts = { "1", "2", "3", "4", "5" };
 	for (const auto& s : scripts) {
 		ProgVM pvm;
 		printf(":running file: %s.bas\n", s.c_str());
@@ -46,6 +46,8 @@ int main() {
 			{ stringstream ss("blah");  pvm.input = &ss;  pvm.run(); }
 		else if (s == "3")
 			{ stringstream ss("fred");  pvm.input = &ss;  pvm.run(); }
+		else if (s == "4")
+			{ stringstream ss("5");  pvm.input = &ss;  pvm.run(); }
 		else
 			{ pvm.run(); }
 		printf("-----\n");
@@ -187,24 +189,35 @@ int ProgVM::runblock(const Prog& mprog) {
 				return fprintf(stderr, "error: let: expected identifier, value\n"), 1;
 			env[ln[1]] = getval(ln[2]);
 		}
-		else if (in_list( ln[0], { "eq", "lt" } )) {
+		else if (in_list( ln[0], { "eq", "lt", "gt" } )) {
 			if ( ln.size() != 3 || !is_var(ln[1]) || !is_var(ln[2]) )
 				return fprintf(stderr, "error: %s: expected value, value\n", ln[0].c_str()), 1;
 			string a = getval( ln[1] ), b = getval( ln[2] );
 			int v = 0;
 			if      (ln[0] == "eq" )  v = ( unstring(a) == unstring(b) );
 			else if (ln[0] == "lt" )  v = ( to_num(a) < to_num(b) );
+			else if (ln[0] == "gt" )  v = ( to_num(a) > to_num(b) );
+			//else if (ln[0] == "or" )  v = ( unstring(a) == "1" || unstring(b) == "1" );
 			stack.push_back( to_string(v) );
 		}
-		else if (in_list( ln[0], { "add" } )) {
+		else if (in_list( ln[0], { "add", "mod" } )) {
 			if ( ln.size() != 3 || !is_ident(ln[1]) || !is_var(ln[2]) )
 				return fprintf(stderr, "error: %s: expected identifier, value\n", ln[0].c_str()), 1;
 			int a = to_num(getval( ln[1] )), b = to_num(getval( ln[2] ));
-			if (ln[0] == "add")  a += b;
-			env[ln[1]] = '"' + to_string( a ) + '"';
+			if      (ln[0] == "add")  a += b;
+			else if (ln[0] == "mod")  a %= b;
+			s = '"' + to_string( a ) + '"';
+			if (ln[1] == "pop")  stack.push_back( s );
+			else  env[ln[1]] = s;
+			
 		}
 		else if (ln[0] == "pop") {
 			if (stack.size())  stack.pop_back();
+		}
+		else if (ln[0] == "push") {
+			if ( ln.size() != 2 || !is_var(ln[1]) )
+				return fprintf(stderr, "error: push: expected var\n"), 1;
+			stack.push_back( getval( ln[1] ) );
 		}
 		else if (ln[0] == "do") {
 			runblock( block );
