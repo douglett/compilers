@@ -7,18 +7,10 @@
 #include <sstream>
 using namespace std;
 
+// parse
 struct Prog {
 	vector<string> cmdline;
 	list<Prog> block;
-};
-struct ProgVM {
-	Prog prog;
-	vector<string> stack;
-	map<string, string> env;
-	istream* input = &cin;
-	int run();
-	int runblock(const Prog& mprog);
-	string getval(const string& v);
 };
 int parsefile(const string& fname, Prog& prog);
 int parseblock(const vector<string>& lines, int& pos, Prog& prog);
@@ -28,11 +20,24 @@ int is_alpha(char c);
 int is_numeric(char c);
 int is_strlit(const string& str);
 int is_ident(const string& str);
+string unstring(const string& v);
+float to_num(const string& v);
+int in_list(const string& s, const vector<string>& vs);
 // run
-int runprog(const Prog& prog, istream& input);
+struct ProgVM {
+	Prog prog;
+	vector<string> stack;
+	map<string, string> env;
+	string state;
+	istream* input = &cin;
+	int run();
+	int runblock(const Prog& mprog);
+	string getval(const string& v);
+};
+
 
 int main() {
-	vector<string> scripts = { "1", "2", "3" };
+	vector<string> scripts = { "1", "2", "3", "4" };
 	for (const auto& s : scripts) {
 		ProgVM pvm;
 		printf(":running file: %s.bas\n", s.c_str());
@@ -60,20 +65,23 @@ int parsefile(const string& fname, Prog& prog) {
 		lines.push_back(s);
 	fs.close();
 	// blockify
-	prog = Prog{};
-	int pos = 0;
-	return parseblock(lines, pos, prog);
+	prog = Prog{ .cmdline={"do"} };
+	int pos = 0, err = 0;
+	err = parseblock(lines, pos, prog);
+	prog.block.push_back({ .cmdline={"end"} });
+	return err;
 }
 
 int parseblock(const vector<string>& lines, int& pos, Prog& prog) {
-	if (prog.cmdline.size() == 0)  prog.cmdline = { "do" };
+	// if (prog.cmdline.size() == 0)  prog.cmdline = { "do" };
 	vector<string> toklist;
 	while (pos < lines.size()) {
 		parseline( lines[pos++], toklist );
 		prog.block.push_back({ .cmdline=toklist, .block={} });
 		// sub lists
 		if (toklist.size() == 0) ;
-		else if ( toklist[0] == "if" || toklist[0] == "ifn" ) {
+		// else if ( toklist[0] == "if" || toklist[0] == "ifn" ) {
+		else if (in_list( toklist[0], { "do", "if", "ifn" } )) {
 			int err = parseblock( lines, pos, prog.block.back() );
 			if (err)  return err;
 		}
@@ -92,6 +100,10 @@ int parseline(const string& line, vector<string>& toklist) {
 		if (isspace(line[i])) { 
 			if (s.size()) toklist.push_back(s);  // save existing
 			s = "";  // reset
+		}
+		// comment start - don't save
+		else if (line[i] == '#') {
+			break;
 		}
 		// string start - parse
 		else if (line[i] == '"') {
@@ -133,9 +145,20 @@ int is_ident(const string& str) {
 int is_var(const string& v) {
 	return ( is_strlit(v) || is_ident(v) );
 }
-string unstrint(const string& v) {
+string unstring(const string& v) {
 	if (is_strlit(v))  return v.substr(1, v.length()-1);
 	return v;
+}
+float to_num(const string& v) {
+	stringstream ss( unstring(v) );
+	float f = 0;
+	ss >> f;
+	return f;
+}
+int in_list(const string& s, const vector<string>& vs) {
+	for (const auto& ss : vs)
+		if (ss == s)  return 1;
+	return 0;
 }
 
 
@@ -144,8 +167,10 @@ int ProgVM::run() {
 	return runblock( prog );
 }
 int ProgVM::runblock(const Prog& mprog) {
+	const string BLOCKCMD = ( mprog.cmdline.size() ? mprog.cmdline[0] : "" );
 	string s;
 	int showcmd = 0;
+	RESTART_BLOCK:
 	for (const auto& block : mprog.block) {
 		const auto& ln = block.cmdline;
 		// show
@@ -157,14 +182,35 @@ int ProgVM::runblock(const Prog& mprog) {
 		// parse
 		if (ln.size() == 0) ;
 		else if (ln[0] == "end")  ;  // noop
-		else if (ln[0] == "eq") {
+		else if (ln[0] == "let") {
 			if ( ln.size() != 3 || !is_ident(ln[1]) || !is_var(ln[2]) )
-				return fprintf(stderr, "error: eq: expected identifier, value\n"), 1;
-			// printf("%s %s\n",  getval(ln[1]).c_str(), getval(ln[2]).c_str());
-			stack.push_back(to_string( getval(ln[1]) == getval(ln[2]) ));
+				return fprintf(stderr, "error: let: expected identifier, value\n"), 1;
+			env[ln[1]] = getval(ln[2]);
+		}
+		else if (in_list( ln[0], { "eq", "lt" } )) {
+			if ( ln.size() != 3 || !is_var(ln[1]) || !is_var(ln[2]) )
+				return fprintf(stderr, "error: %s: expected value, value\n", ln[0].c_str()), 1;
+			string a = getval( ln[1] ), b = getval( ln[2] );
+			int v = 0;
+			if      (ln[0] == "eq" )  v = ( unstring(a) == unstring(b) );
+			else if (ln[0] == "lt" )  v = ( to_num(a) < to_num(b) );
+			stack.push_back( to_string(v) );
+		}
+		else if (in_list( ln[0], { "add" } )) {
+			if ( ln.size() != 3 || !is_ident(ln[1]) || !is_var(ln[2]) )
+				return fprintf(stderr, "error: %s: expected identifier, value\n", ln[0].c_str()), 1;
+			int a = to_num(getval( ln[1] )), b = to_num(getval( ln[2] ));
+			if (ln[0] == "add")  a += b;
+			env[ln[1]] = '"' + to_string( a ) + '"';
 		}
 		else if (ln[0] == "pop") {
 			if (stack.size())  stack.pop_back();
+		}
+		else if (ln[0] == "do") {
+			runblock( block );
+		}
+		else if (ln[0] == "continue") {
+			state = "continue";
 		}
 		else if (ln[0] == "if" || ln[0] == "ifn") {
 			if ( ln.size() != 3 || !is_var(ln[1]) || ln[2] != "then" )
@@ -172,10 +218,10 @@ int ProgVM::runblock(const Prog& mprog) {
 			// printf("%s %s\n", ln[0].c_str(), stack.back().c_str());
 			if ( ln[0] == "if" && getval(ln[1]) == "1" ) {
 				// printf("ok\n"); 
-				runblock(block);
+				runblock( block );
 			}
 			if ( ln[0] == "ifn" && getval(ln[1]) == "0" ) {
-				runblock(block);
+				runblock( block );
 			}
 			// else  printf("no\n");
 		}
@@ -193,6 +239,13 @@ int ProgVM::runblock(const Prog& mprog) {
 		else {
 			return fprintf(stderr, "error: unknown command %s\n", ln[0].c_str()), 1;
 		}
+		// -----
+		// state changes
+		if (state == "continue") {
+			if (showcmd)  printf("STATE: continue. cmd: %s\n", BLOCKCMD.c_str());
+			if (BLOCKCMD == "do") { state = ""; goto RESTART_BLOCK; }
+			else  break;
+		}
 	}
 	return 0;
 }
@@ -204,7 +257,3 @@ string ProgVM::getval(const string& v) {
 	if (env.count(v))  return env[v];
 	return "\"undefined\"";
 }
-
-// int rungetval(const string& s) {
-	
-// }

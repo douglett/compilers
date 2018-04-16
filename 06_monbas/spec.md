@@ -5,7 +5,7 @@ basic commands
 - <string> ".*"  ; standard string
 - <val> [id | pop | string]  ; value
 - let <id> <string>  ; define.
-- add/sub/mul/div/mod <val> <val> ; id->float, val->float, operation, return result <string>
+- add/sub/mul/div/mod <id> <val> ; id->float, val->float, operation, id = result
 - eq/neq/lt/gt <val> <val> ; returns 1 or 0 <string>
 - cat <val> <val> ; standard string concatonation. return <string>
 - split <val> <val> <val> ; standard split. val, start, end. return <string> <string>

@@ -1,3 +1,4 @@
+# switch on name
 print "what is your name?"
 input inp
 eq inp "fred"
