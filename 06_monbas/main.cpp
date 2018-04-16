@@ -4,30 +4,44 @@
 // #include <list>
 #include <map>
 #include <fstream>
+#include <sstream>
 using namespace std;
 
 struct Prog {
 	vector<string> cmdline;
 	vector<Prog> block;
 };
-// typedef  vector<vector<string>>  Prog;
+struct ProgVM {
+	Prog prog;
+	vector<string> stack;
+	map<string, string> env;
+	istream* input = &cin;
+	int run();
+	string getval(const string& v);
+};
 int parsefile(const string& fname, Prog& prog);
 int parseblock(const vector<string>& lines, int& pos, Prog& prog);
 int parseline(const string& line, vector<string>& toklist);
-int runprog(const Prog& prog);
 // identifier functions
 int is_alpha(char c);
 int is_numeric(char c);
 int is_strlit(const string& str);
 int is_ident(const string& str);
+// run
+int runprog(const Prog& prog, istream& input);
 
 int main() {
 	vector<string> scripts = { "1", "2", "3" };
-	Prog prog;
 	for (const auto& s : scripts) {
+		ProgVM pvm;
 		printf(":running file: %s.bas\n", s.c_str());
-		if (parsefile("scripts/"+s+".bas", prog))  continue;
-		runprog(prog);
+		if (parsefile("scripts/"+s+".bas", pvm.prog))  continue;
+		if (s == "2")
+			{ stringstream ss("blah");  pvm.input = &ss;  pvm.run(); }
+		if (s == "3")
+			{ stringstream ss("fred");  pvm.input = &ss;  pvm.run(); }
+		else
+			{ pvm.run(); }
 		printf("-----\n");
 	}
 }
@@ -89,49 +103,6 @@ int parseline(const string& line, vector<string>& toklist) {
 }
 
 
-int runprog(const Prog& prog) {
-	map<string, string> env;
-	string s;
-	int showcmd = 0;
-	for (const auto& block : prog.block) {
-		const auto& ln = block.cmdline;
-		// show
-		if (showcmd) {
-			for (const auto& tok : ln)
-				printf("[%s]", tok.c_str());
-			printf("\n");
-		}
-		// parse
-		if (ln.size() == 0) ;
-		// else if (ln[0] == "eq") {
-
-		// }
-		else if (ln[0] == "print") {
-			for (int i=1; i<ln.size(); i++) {
-				if      ( is_strlit(ln[i]) )  s = ln[i];
-				else if ( is_ident(ln[i])  )  s = env[ln[i]];
-				printf("%s ", s.c_str());
-			}
-			printf("\n");
-		}
-		else if (ln[0] == "input") {
-			if (ln.size() != 2 || !is_ident(ln[1]))
-				return fprintf(stderr, "error: expected identifier\n"), 1;
-			getline(cin, s);
-			env[ln[1]] = '"' + s + '"';
-		}
-		else {
-			return fprintf(stderr, "error: unknown command %s\n", ln[0].c_str()), 1;
-		}
-	}
-	return 0;
-}
-
-// int rungetval(const string& s) {
-	
-// }
-
-
 // identifier functions
 int is_alpha(char c) {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
@@ -149,3 +120,60 @@ int is_ident(const string& str) {
 		if (!is_alpha(c) && !is_numeric(c))  return 0;
 	return 1;
 }
+int is_var(const string& v) {
+	return ( is_strlit(v) || is_ident(v) );
+}
+
+
+// runable
+int ProgVM::run() {
+	string s;
+	int showcmd = 0;
+	for (const auto& block : prog.block) {
+		const auto& ln = block.cmdline;
+		// show
+		if (showcmd) {
+			for (const auto& tok : ln)
+				printf("[%s]", tok.c_str());
+			printf("\n");
+		}
+		// parse
+		if (ln.size() == 0) ;
+		else if (ln[0] == "eq") {
+			if ( ln.size() != 3 || !is_ident(ln[1]) || !is_var(ln[2]) )
+				return fprintf(stderr, "error: eq: expected identifier, value\n"), 1;
+			 stack.push_back(to_string( getval(ln[1]) == getval(ln[2]) ));
+		}
+		else if (ln[0] == "if") {
+			if ( ln.size() != 3 || !is_var(ln[1]) || ln[2] != "then" )
+				return fprintf(stderr, "error: if: expected var, then\n"), 1;
+			if ( getval(ln[1]) == "1" ) printf("ok\n");  else printf("no\n");
+		}
+		else if (ln[0] == "print") {
+			for (int i=1; i<ln.size(); i++) 
+				printf("%s ", getval(ln[i]).c_str());
+			printf("\n");
+		}
+		else if (ln[0] == "input") {
+			if ( ln.size() != 2 || !is_ident(ln[1]) )
+				return fprintf(stderr, "error: input: expected identifier\n"), 1;
+			getline(*input, s);
+			env[ln[1]] = '"' + s + '"';
+		}
+		else {
+			return fprintf(stderr, "error: unknown command %s\n", ln[0].c_str()), 1;
+		}
+	}
+	return 0;
+}
+
+string ProgVM::getval(const string& v) {
+	if (v == "pop" && stack.size()) { string s = stack.back();  stack.pop_back();  return s; }
+	if (is_strlit(v))  return v;
+	if (env.count(v))  return env[v];
+	return "\"undefined\"";
+}
+
+// int rungetval(const string& s) {
+	
+// }
