@@ -44,7 +44,8 @@ int main() {
 		{ "3", "fred" },
 		{ "4", "5" },
 		{ "5", "30" },
-		{ "6", "7\nadd", "7\nmul" }
+		{ "6", "7\nadd", "7\nmul" },
+		{ "7", "" }
 	};
 	for (const auto& scr : scripts) {
 		// parse vm
@@ -210,12 +211,14 @@ int ProgVM::runblock(const Prog& mprog) {
 			//else if (ln[0] == "or" )  v = ( unstring(a) == "1" || unstring(b) == "1" );
 			stack.push_back('"' + to_string(v) + '"');
 		}
-		else if (in_list( ln[0], { "add", "mul", "mod" } )) {
+		else if (in_list( ln[0], { "add", "sub", "mul", "div", "mod" } )) {
 			if ( ln.size() != 3 || !is_ident(ln[1]) || !is_var(ln[2]) )
 				return fprintf(stderr, "error: %s: expected identifier, value\n", ln[0].c_str()), 1;
 			int a = to_num(getval( ln[1] )), b = to_num(getval( ln[2] ));
 			if      (ln[0] == "add")  a += b;
+			if      (ln[0] == "sub")  a -= b;
 			else if (ln[0] == "mul")  a *= b;
+			else if (ln[0] == "div")  a /= b;
 			else if (ln[0] == "mod")  a %= b;
 			s = '"' + to_string( a ) + '"';
 			if (ln[1] == "pop")  stack.push_back( s );
