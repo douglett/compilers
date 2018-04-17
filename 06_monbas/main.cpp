@@ -20,6 +20,8 @@ int is_alpha(char c);
 int is_numeric(char c);
 int is_strlit(const string& str);
 int is_ident(const string& str);
+int is_var(const string& str);
+int is_false(const string& str);
 string unstring(const string& v);
 float to_num(const string& v);
 int in_list(const string& s, const vector<string>& vs);
@@ -45,7 +47,8 @@ int main() {
 		{ "4", "5" },
 		{ "5", "30" },
 		{ "6", "7\nadd", "7\nmul" },
-		{ "7", "" }
+		{ "7", "" },
+		{ "8", "" }
 	};
 	for (const auto& scr : scripts) {
 		// parse vm
@@ -157,6 +160,10 @@ int is_ident(const string& str) {
 int is_var(const string& v) {
 	return ( is_strlit(v) || is_ident(v) );
 }
+int is_false(const string& v) {
+	string vv = unstring(v);
+	return ( vv == "" || vv == "0" );
+}
 string unstring(const string& v) {
 	if (is_strlit(v))  return v.substr(1, v.length()-2);
 	return v;
@@ -166,6 +173,11 @@ float to_num(const string& v) {
 	float f = 0;
 	ss >> f;
 	return f;
+}
+string to_str(float f) {
+	stringstream ss;
+	ss << f;
+	return ss.str();
 }
 int in_list(const string& s, const vector<string>& vs) {
 	for (const auto& ss : vs)
@@ -214,13 +226,13 @@ int ProgVM::runblock(const Prog& mprog) {
 		else if (in_list( ln[0], { "add", "sub", "mul", "div", "mod" } )) {
 			if ( ln.size() != 3 || !is_ident(ln[1]) || !is_var(ln[2]) )
 				return fprintf(stderr, "error: %s: expected identifier, value\n", ln[0].c_str()), 1;
-			int a = to_num(getval( ln[1] )), b = to_num(getval( ln[2] ));
+			float a = to_num(getval( ln[1] )), b = to_num(getval( ln[2] ));
 			if      (ln[0] == "add")  a += b;
 			if      (ln[0] == "sub")  a -= b;
 			else if (ln[0] == "mul")  a *= b;
 			else if (ln[0] == "div")  a /= b;
-			else if (ln[0] == "mod")  a %= b;
-			s = '"' + to_string( a ) + '"';
+			else if (ln[0] == "mod")  a = int(a) % int(b);
+			s = '"' + to_str( a ) + '"';
 			if (ln[1] == "pop")  stack.push_back( s );
 			else  env[ln[1]] = s;
 			
@@ -246,11 +258,11 @@ int ProgVM::runblock(const Prog& mprog) {
 			if ( ln.size() != 3 || !is_var(ln[1]) || ln[2] != "then" )
 				return fprintf(stderr, "error: if: expected var, then\n"), 1;
 			// printf("%s %s\n", ln[0].c_str(), stack.back().c_str());
-			if ( ln[0] == "if"  && unstring(getval( ln[1] )) == "1" ) {
+			if ( ln[0] == "if"  && !is_false(getval( ln[1] )) ) {
 				// printf("ok\n"); 
 				runblock( block );
 			}
-			if ( ln[0] == "ifn" && unstring(getval( ln[1] )) == "0" ) {
+			if ( ln[0] == "ifn" && is_false(getval( ln[1] )) ) {
 				runblock( block );
 			}
 			// else  printf("no\n");
