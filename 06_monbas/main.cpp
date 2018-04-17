@@ -30,26 +30,35 @@ struct ProgVM {
 	map<string, string> env;
 	string state;
 	istream* input = &cin;
-	int run();
-	int runblock(const Prog& mprog);
+	int  run();
+	int  runblock(const Prog& mprog);
+	void reset();
 	string getval(const string& v);
 };
 
 
 int main() {
-	vector<string> scripts = { "1", "2", "3", "4", "5" };
-	for (const auto& s : scripts) {
+	vector<vector<string>> scripts = { 
+		{ "1", "" },
+		{ "2", "blah" },
+		{ "3", "fred" },
+		{ "4", "5" },
+		{ "5", "30" },
+		{ "6", "7\nadd", "7\nmul" }
+	};
+	for (const auto& scr : scripts) {
+		// parse vm
 		ProgVM pvm;
-		printf(":running file: %s.bas\n", s.c_str());
-		if (parsefile("scripts/"+s+".bas", pvm.prog))  continue;
-		if (s == "2")
-			{ stringstream ss("blah");  pvm.input = &ss;  pvm.run(); }
-		else if (s == "3")
-			{ stringstream ss("fred");  pvm.input = &ss;  pvm.run(); }
-		else if (s == "4")
-			{ stringstream ss("5");  pvm.input = &ss;  pvm.run(); }
-		else
-			{ pvm.run(); }
+		printf(":running file: %s.bas\n", scr[0].c_str());
+		if (parsefile("scripts/"+scr[0]+".bas", pvm.prog))  continue;
+		// run each test in sequence
+		for (int i=1; i<scr.size(); i++) {
+			pvm.reset();
+			stringstream ss(scr[i]);
+			if (ss.peek() != EOF)
+				pvm.input = &ss;
+			pvm.run();
+		}
 		printf("-----\n");
 	}
 }
@@ -148,7 +157,7 @@ int is_var(const string& v) {
 	return ( is_strlit(v) || is_ident(v) );
 }
 string unstring(const string& v) {
-	if (is_strlit(v))  return v.substr(1, v.length()-1);
+	if (is_strlit(v))  return v.substr(1, v.length()-2);
 	return v;
 }
 float to_num(const string& v) {
@@ -194,17 +203,19 @@ int ProgVM::runblock(const Prog& mprog) {
 				return fprintf(stderr, "error: %s: expected value, value\n", ln[0].c_str()), 1;
 			string a = getval( ln[1] ), b = getval( ln[2] );
 			int v = 0;
+			// printf("%s  %s %s   %s %s\n", ln[0].c_str(), a.c_str(), b.c_str(), unstring(a).c_str(), unstring(b).c_str());
 			if      (ln[0] == "eq" )  v = ( unstring(a) == unstring(b) );
 			else if (ln[0] == "lt" )  v = ( to_num(a) < to_num(b) );
 			else if (ln[0] == "gt" )  v = ( to_num(a) > to_num(b) );
 			//else if (ln[0] == "or" )  v = ( unstring(a) == "1" || unstring(b) == "1" );
-			stack.push_back( to_string(v) );
+			stack.push_back('"' + to_string(v) + '"');
 		}
-		else if (in_list( ln[0], { "add", "mod" } )) {
+		else if (in_list( ln[0], { "add", "mul", "mod" } )) {
 			if ( ln.size() != 3 || !is_ident(ln[1]) || !is_var(ln[2]) )
 				return fprintf(stderr, "error: %s: expected identifier, value\n", ln[0].c_str()), 1;
 			int a = to_num(getval( ln[1] )), b = to_num(getval( ln[2] ));
 			if      (ln[0] == "add")  a += b;
+			else if (ln[0] == "mul")  a *= b;
 			else if (ln[0] == "mod")  a %= b;
 			s = '"' + to_string( a ) + '"';
 			if (ln[1] == "pop")  stack.push_back( s );
@@ -225,42 +236,57 @@ int ProgVM::runblock(const Prog& mprog) {
 		else if (ln[0] == "continue") {
 			state = "continue";
 		}
+		else if (ln[0] == "break") {
+			state = "break";
+		}
 		else if (ln[0] == "if" || ln[0] == "ifn") {
 			if ( ln.size() != 3 || !is_var(ln[1]) || ln[2] != "then" )
 				return fprintf(stderr, "error: if: expected var, then\n"), 1;
 			// printf("%s %s\n", ln[0].c_str(), stack.back().c_str());
-			if ( ln[0] == "if" && getval(ln[1]) == "1" ) {
+			if ( ln[0] == "if"  && unstring(getval( ln[1] )) == "1" ) {
 				// printf("ok\n"); 
 				runblock( block );
 			}
-			if ( ln[0] == "ifn" && getval(ln[1]) == "0" ) {
+			if ( ln[0] == "ifn" && unstring(getval( ln[1] )) == "0" ) {
 				runblock( block );
 			}
 			// else  printf("no\n");
 		}
 		else if (ln[0] == "print") {
 			for (int i=1; i<ln.size(); i++) 
-				printf("%s ", getval(ln[i]).c_str());
+				printf("%s ", unstring(getval( ln[i] )).c_str() );
 			printf("\n");
 		}
 		else if (ln[0] == "input") {
 			if ( ln.size() != 2 || !is_ident(ln[1]) )
 				return fprintf(stderr, "error: input: expected identifier\n"), 1;
+			printf("> ");  // prompt
 			getline(*input, s);
 			env[ln[1]] = '"' + s + '"';
 		}
 		else {
-			return fprintf(stderr, "error: unknown command %s\n", ln[0].c_str()), 1;
+			return fprintf(stderr, "syntax error: unknown command %s\n", ln[0].c_str()), 1;
 		}
 		// -----
 		// state changes
+		if (showcmd && state.size())  printf("STATE: continue. cmd: %s\n", BLOCKCMD.c_str());
 		if (state == "continue") {
-			if (showcmd)  printf("STATE: continue. cmd: %s\n", BLOCKCMD.c_str());
 			if (BLOCKCMD == "do") { state = ""; goto RESTART_BLOCK; }
 			else  break;
 		}
+		else if (state == "break") {
+			if (BLOCKCMD == "do")  state = ""; 
+			break;
+		}
 	}
 	return 0;
+}
+
+void ProgVM::reset() {
+	stack = {};
+	env = {};
+	state = "";
+	input = &cin;
 }
 
 string ProgVM::getval(const string& v) {
