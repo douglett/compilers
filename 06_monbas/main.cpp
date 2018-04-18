@@ -49,7 +49,8 @@ int main() {
 		{ "1/6", "7\nadd", "7\nmul" },
 		{ "1/7", "" },
 		{ "1/8", "" },
-		{ "2/1", "" }
+		{ "2/1", "" },
+		{ "2/2", "" }
 	};
 	for (const auto& scr : scripts) {
 		// parse vm
@@ -185,12 +186,18 @@ int in_list(const string& s, const vector<string>& vs) {
 		if (ss == s)  return 1;
 	return 0;
 }
-vector<string> split(const string& s, char k) {
+vector<string> vsplit(const string& s, char k) {
 	vector<string> vs = {""};
 	for (auto c : s)
 		if (c == k)  vs.push_back("");
 		else  vs.back() += c;
 	return vs;
+}
+string vjoin(const vector<string>& vs, char k) {
+	string str;
+	for (int i=0; i<vs.size(); i++)
+		str += ( i == 0 ? string() : string()+k ) + vs[i];
+	return str;
 }
 
 
@@ -290,12 +297,22 @@ int ProgVM::runblock(const Prog& mprog) {
 		else if (ln[0] == "arrat") {
 			if ( ln.size() != 3 || !is_var(ln[1]) || !is_var(ln[2]) )
 				return fprintf(stderr, "error: arrat: expected var, var\n"), 1;
-			auto vs = split( unstring(getval( ln[1] )), ';' );
+			auto vs = vsplit( unstring(getval( ln[1] )), ';' );
 			int index = to_num(getval( ln[2] ));
 			if (vs.size() && index >= 0 && index < vs.size())
 				stack.push_back('"' + vs[index] + '"');
 			else
 				stack.push_back(getval(""));
+		}
+		else if (ln[0] == "arrset") {
+			if ( ln.size() != 4 || !is_ident(ln[1]) || !is_var(ln[2]) || !is_var(ln[3]) )
+				return fprintf(stderr, "error: arrset: expected ident, var, var\n"), 1;
+			auto vs = vsplit( unstring(getval( ln[1] )), ';' );
+			int index = to_num(getval( ln[2] ));
+			auto var = unstring(getval( ln[3] ));
+			if (vs.size() && index >= 0 && index < vs.size())
+				vs[index] = var;
+			env[ln[1]] = '"' + vjoin( vs, ';' ) + '"';
 		}
 		else if (ln[0] == "arrlen") {
 			if ( ln.size() != 2 || !is_ident(ln[1]) )
