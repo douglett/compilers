@@ -41,14 +41,15 @@ struct ProgVM {
 
 int main() {
 	vector<vector<string>> scripts = { 
-		{ "1", "" },
-		{ "2", "blah" },
-		{ "3", "fred" },
-		{ "4", "5" },
-		{ "5", "30" },
-		{ "6", "7\nadd", "7\nmul" },
-		{ "7", "" },
-		{ "8", "" }
+		{ "1/1", "" },
+		{ "1/2", "blah" },
+		{ "1/3", "fred" },
+		{ "1/4", "5" },
+		{ "1/5", "30" },
+		{ "1/6", "7\nadd", "7\nmul" },
+		{ "1/7", "" },
+		{ "1/8", "" },
+		{ "2/1", "" }
 	};
 	for (const auto& scr : scripts) {
 		// parse vm
@@ -184,6 +185,13 @@ int in_list(const string& s, const vector<string>& vs) {
 		if (ss == s)  return 1;
 	return 0;
 }
+vector<string> split(const string& s, char k) {
+	vector<string> vs = {""};
+	for (auto c : s)
+		if (c == k)  vs.push_back("");
+		else  vs.back() += c;
+	return vs;
+}
 
 
 // runable
@@ -278,6 +286,24 @@ int ProgVM::runblock(const Prog& mprog) {
 			printf("> ");  // prompt
 			getline(*input, s);
 			env[ln[1]] = '"' + s + '"';
+		}
+		else if (ln[0] == "arrat") {
+			if ( ln.size() != 3 || !is_var(ln[1]) || !is_var(ln[2]) )
+				return fprintf(stderr, "error: arrat: expected var, var\n"), 1;
+			auto vs = split( unstring(getval( ln[1] )), ';' );
+			int index = to_num(getval( ln[2] ));
+			if (vs.size() && index >= 0 && index < vs.size())
+				stack.push_back('"' + vs[index] + '"');
+			else
+				stack.push_back(getval(""));
+		}
+		else if (ln[0] == "arrlen") {
+			if ( ln.size() != 2 || !is_ident(ln[1]) )
+				return fprintf(stderr, "error: arrlen: expected identifier\n"), 1;
+			int len = 1;
+			for (char c : unstring(getval( ln[1] )))
+				if (c == ';') len++;
+			stack.push_back('"' + to_str(len) + '"');
 		}
 		else {
 			return fprintf(stderr, "syntax error: unknown command %s\n", ln[0].c_str()), 1;
